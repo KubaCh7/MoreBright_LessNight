@@ -95,6 +95,11 @@ final class ScreenController: ObservableObject, Identifiable {
     private var headroomTimer: Timer?
     private var headroomTimerInterval: TimeInterval = 0
     private var autoBrightnessPaused = false
+    /// Headroom we follow. Rises immediately; drops only after a dip lasts `dipGrace`, so
+    /// short transient dips (Cmd+Tab, Space switch, Mission Control animations) don't dim.
+    private var stableHeadroom: Double = 1
+    private var headroomDipSince: Date?
+    private static let dipGrace: TimeInterval = 3
     private let defaults = UserDefaults.standard
 
     init(screen: NSScreen, displayID: CGDirectDisplayID, model: AppModel) {
@@ -192,7 +197,7 @@ final class ScreenController: ObservableObject, Identifiable {
     /// gain asks for it (BrightIntosh uses 1.12). After sleep/wake macOS can report a bogus
     /// 1.0 for a long time; then fall back to the potential value (BetterDisplay #4918).
     private var availableHeadroom: Double {
-        if currentHeadroom >= 1.05 { return currentHeadroom }
+        if stableHeadroom >= 1.05 { return stableHeadroom }
         if let since = boostRequestedSince, Date().timeIntervalSince(since) > 5 { return potentialHeadroom }
         return 1.12
     }
@@ -265,6 +270,8 @@ final class ScreenController: ObservableObject, Identifiable {
             if boostRequestedSince == nil {
                 boostRequestedSince = Date()
                 fastPollUntil = Date().addingTimeInterval(30)
+                stableHeadroom = currentHeadroom
+                headroomDipSince = nil
             }
             pauseAutoBrightnessIfNeeded()
             startHeadroomMonitor()
@@ -286,6 +293,14 @@ final class ScreenController: ObservableObject, Identifiable {
             overlayLog.info("display \(self.displayID) gain \(self.appliedGain, format: .fixed(precision: 2)) -> \(gain, format: .fixed(precision: 2)) (requested \(self.requestedGain, format: .fixed(precision: 2)), headroom \(self.currentHeadroom, format: .fixed(precision: 2)))")
             appliedGain = gain
         }
+    }
+
+    /// App switch, Space change: make sure the overlay is still on top and poll fast for a bit.
+    func reassertOverlay() {
+        guard overlayIsPresenting else { return }
+        overlay?.orderFront()
+        fastPollUntil = max(fastPollUntil, Date().addingTimeInterval(5))
+        startHeadroomMonitor()
     }
 
     /// Setting toggled off, or app quitting.
@@ -333,30 +348,46 @@ final class ScreenController: ObservableObject, Identifiable {
         ownTargetDeadline = Date().addingTimeInterval(3)
     }
 
-    /// Someone (or our own animated write) changed brightness. We follow, never write back.
+    /// Someone (or our own animated write) changed brightness.
     private func handleBrightnessChange(_ value: Double) {
         let previous = lastObservedBrightness ?? value
         lastObservedBrightness = value
         defer { applyOverlay(animated: true) }
 
-        // Our own write still in flight or still animating: not user input.
+        // Our own write still in flight, or macOS animating toward the value we asked for.
         if pendingWrite != nil { return }
         if let target = ownTarget {
             let reached = abs(value - target) <= 0.01
-            if !reached, Date() < ownTargetDeadline { return }
-            ownTarget = nil
+            let movingTowardTarget = abs(value - target) < abs(previous - target) - 0.001
             if reached {
+                ownTarget = nil
                 systemBrightness = value
                 return
             }
+            if Date() < ownTargetDeadline, movingTowardTarget || abs(value - previous) < 0.001 { return }
+            ownTarget = nil // moving away from our target: that's the user
         }
 
         systemBrightness = value
-        // A real step down (one F1 press is 1/16) means the user wants it darker: drop the boost.
-        if boostGain > 1, value < 0.995, previous - value >= 0.04 {
-            overlayLog.info("display \(self.displayID) brightness stepped down \(previous, format: .fixed(precision: 3)) -> \(value, format: .fixed(precision: 3)), boost off")
+        guard boostGain > 1.0001, value <= 0.97 else { return }
+
+        // Brightness-down pressed while boosting. macOS animates the change, so we compare
+        // against full brightness rather than the previous sample. Each 1/16 is one key press.
+        let steps = max(1, Int(((1 - value) * 16).rounded()))
+        let newPosition = position - Double(steps) / 16
+        if controlsSystemBrightness, knee > 0, newPosition > knee + 0.001 {
+            // Still inside the boost range: lower the boost instead, keep the panel at 100 %.
+            boostGain = max(1, newPosition / knee)
+            defaults.set(boostGain, forKey: "boost.\(key)")
+            systemBrightness = 1
+            expectOwnBrightness(1)
+            DisplayServices.setBrightness(displayID, 1)
+            overlayLog.info("display \(self.displayID) brightness key -\(steps) inside boost, gain now \(self.boostGain, format: .fixed(precision: 2))")
+        } else {
+            // Below the knee: hand control back to macOS brightness.
             boostGain = 1
             defaults.set(boostGain, forKey: "boost.\(key)")
+            overlayLog.info("display \(self.displayID) brightness key -\(steps), boost off")
         }
     }
 
@@ -367,13 +398,30 @@ final class ScreenController: ObservableObject, Identifiable {
         if potential != potentialHeadroom { potentialHeadroom = potential }
         if current != currentHeadroom { currentHeadroom = current }
 
+        var stableChanged = false
+        if current >= stableHeadroom - 0.01 {
+            if abs(current - stableHeadroom) > 0.01 { stableChanged = true }
+            stableHeadroom = current
+            headroomDipSince = nil
+        } else if let since = headroomDipSince {
+            if Date().timeIntervalSince(since) >= Self.dipGrace {
+                overlayLog.info("display \(self.displayID) headroom dip persisted, following \(self.stableHeadroom, format: .fixed(precision: 2)) -> \(current, format: .fixed(precision: 2))")
+                stableHeadroom = current
+                headroomDipSince = nil
+                stableChanged = true
+            }
+        } else {
+            headroomDipSince = Date()
+            overlayLog.debug("display \(self.displayID) headroom dip \(current, format: .fixed(precision: 2)) (holding \(self.stableHeadroom, format: .fixed(precision: 2)))")
+        }
+
         let requested = requestedGain
         if requested > 1.0001, let since = boostRequestedSince, Date().timeIntervalSince(since) > 1.5 {
             let clipped = current + 0.02 < requested
             if clipped != highlightsClipped { highlightsClipped = clipped }
         }
 
-        if changed {
+        if changed || stableChanged {
             overlayLog.debug("display \(self.displayID) headroom current \(current, format: .fixed(precision: 2)) potential \(potential, format: .fixed(precision: 2))")
             applyOverlay(animated: true)
         }

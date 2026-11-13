@@ -73,6 +73,15 @@ final class AppModel: ObservableObject {
             .sink { [weak self] _ in self?.rebuildScreens() }
             .store(in: &cancellables)
 
+        // Cmd+Tab / Space switches: keep the overlay on top through the transition.
+        let workspace = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.didActivateApplicationNotification, NSWorkspace.activeSpaceDidChangeNotification] {
+            workspace.publisher(for: name)
+                .receive(on: RunLoop.main)
+                .sink { [weak self] _ in self?.screens.forEach { $0.reassertOverlay() } }
+                .store(in: &cancellables)
+        }
+
         // Never leave auto-brightness switched off behind us.
         NotificationCenter.default
             .publisher(for: NSApplication.willTerminateNotification)

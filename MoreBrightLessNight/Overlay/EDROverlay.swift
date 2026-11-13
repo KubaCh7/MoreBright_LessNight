@@ -100,6 +100,14 @@ final class EDROverlay {
         }
     }
 
+    /// Re-asserts z-order after app/Space switches; fullscreen transitions can reorder
+    /// windows at the shielding level.
+    func orderFront() {
+        guard isOrderedIn else { return }
+        window.orderFrontRegardless()
+        loop.redraw()
+    }
+
     func forceRedraw() {
         loop.redraw()
     }
