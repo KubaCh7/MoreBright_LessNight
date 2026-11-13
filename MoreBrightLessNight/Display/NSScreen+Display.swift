@@ -19,8 +19,8 @@ func persistentKey(for display: CGDirectDisplayID) -> String {
     return base + "-" + string
 }
 
-/// Brightness model of a panel, in nits. Used only to place the knee on the slider
-/// and to cap the boost; the actual light output is decided by macOS and the panel.
+/// Brightness model of a panel, in nits. Sets the gain for each mode (max / SDR); the
+/// actual light output is decided by macOS and the panel.
 struct NitsProfile: Codable, Equatable {
     var sdrNits: Double
     var sustainedNits: Double

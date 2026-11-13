@@ -32,18 +32,11 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Pause auto-brightness while boosting", isOn: $model.pauseAutoBrightness)
-            } footer: {
-                Text("Turns off “Automatically adjust brightness” while the boost is on, so the light sensor can't pull brightness down, and turns it back on afterwards. Pressing the brightness-down key still turns the boost off.")
-                    .foregroundStyle(.secondary)
-            }
-
-            Section {
-                Toggle("1600-nit mode (peak)", isOn: model.peakModeBinding)
+                BoostLevelPicker()
             } header: {
-                Text("Peak Brightness")
+                Text("Maximum Brightness")
             } footer: {
-                Text("Off: the full slider equals the brightness the panel can sustain (about 1000 nits on MacBook Pro). On: the full slider equals peak brightness (about 1600 nits). Peak mode turns itself off when your Mac gets warm.")
+                Text("Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness, lowered to 1000 nit automatically when your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.")
                     .foregroundStyle(.secondary)
             }
 
@@ -194,7 +187,6 @@ private struct DisplaySettingsSection: View {
             if screen.supportsEDR {
                 BrightnessSlider(
                     value: Binding(get: { screen.position }, set: { screen.setPosition($0) }),
-                    knee: screen.knee,
                     accessibilityLabel: Text("Brightness for \(screen.name)")
                 )
                 if screen.highlightsClipped { ClippedWarning() }
@@ -241,7 +233,7 @@ private struct NitsProfileSection: View {
         } header: {
             Text(verbatim: screen.name)
         } footer: {
-            Text("Used to place the slider's knee and cap the boost. The real output is always limited by the headroom macOS reports.")
+            Text("Sets how many nits full macOS brightness means in each mode. The real output is always limited by the headroom macOS reports.")
                 .foregroundStyle(.secondary)
         }
     }

@@ -1,16 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "1600-nit mode (peak)": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb 1600 nitów (peak)"
-          }
-        }
-      }
-    },
     "1600-nit mode is unavailable right now": {
       "localizations": {
         "pl": {
@@ -27,16 +17,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zaawansowane"
-          }
-        }
-      }
-    },
-    "Allows brightness up to the panel's peak level": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pozwala na jasność do szczytowego poziomu panelu"
           }
         }
       }
@@ -123,6 +103,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sprawdzanie aktualizacji…"
+          }
+        }
+      }
+    },
+    "Choose 1000 nit or 1600 nit first, so there is a boost to measure.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najpierw wybierz 1000 nit lub 1600 nit, żeby było co zmierzyć."
+          }
+        }
+      }
+    },
+    "Choose 1000 nit or 1600 nit, keep this window on that display and click Measure. The boost is turned off briefly for the “before” capture.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wybierz 1000 nit lub 1600 nit, zostaw to okno na tym ekranie i kliknij Zmierz. Podbicie zostanie na chwilę wyłączone na potrzeby zrzutu „przed”."
           }
         }
       }
@@ -267,22 +267,22 @@
         }
       }
     },
+    "Full macOS brightness equals the selected maximum. Brightness keys work as usual.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pełna jasność macOS to wybrane maksimum. Klawisze jasności działają normalnie."
+          }
+        }
+      }
+    },
     "Full power": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Pełna moc"
-          }
-        }
-      }
-    },
-    "Full slider uses peak instead of sustained brightness": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pełny suwak używa jasności szczytowej zamiast utrzymywalnej"
           }
         }
       }
@@ -443,6 +443,26 @@
         }
       }
     },
+    "Maximum Brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maksymalna jasność"
+          }
+        }
+      }
+    },
+    "Maximum brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maksymalna jasność"
+          }
+        }
+      }
+    },
     "Mean ΔE00": {
       "localizations": {
         "pl": {
@@ -503,16 +523,6 @@
         }
       }
     },
-    "Move the slider above the system maximum first, so there is a boost to measure.": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Najpierw przesuń suwak powyżej systemowego maksimum, żeby było co zmierzyć."
-          }
-        }
-      }
-    },
     "No displays found": {
       "localizations": {
         "pl": {
@@ -549,16 +559,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wyłączony"
-          }
-        }
-      }
-    },
-    "Off: the full slider equals the brightness the panel can sustain (about 1000 nits on MacBook Pro). On: the full slider equals peak brightness (about 1600 nits). Peak mode turns itself off when your Mac gets warm.": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyłączony: pełny suwak to jasność, którą panel utrzyma (ok. 1000 nitów w MacBooku Pro). Włączony: pełny suwak to jasność szczytowa (ok. 1600 nitów). Tryb szczytowy wyłącza się sam, gdy Mac się nagrzeje."
           }
         }
       }
@@ -613,16 +613,6 @@
         }
       }
     },
-    "Pause auto-brightness while boosting": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wstrzymuj auto-jasność podczas podbicia"
-          }
-        }
-      }
-    },
     "Paused: display asleep or locked": {
       "localizations": {
         "pl": {
@@ -673,22 +663,22 @@
         }
       }
     },
-    "Peak Brightness": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jasność szczytowa"
-          }
-        }
-      }
-    },
     "Peak brightness makes the display and your Mac noticeably warmer, drains the battery faster and may accelerate panel ageing. macOS can lower the brightness on its own at any time to protect the display. Highlights may clip if the panel cannot sustain the requested level.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Jasność szczytowa wyraźnie nagrzewa ekran i Maca, szybciej rozładowuje baterię i może przyspieszyć zużycie panelu. macOS może w każdej chwili samodzielnie obniżyć jasność, żeby chronić ekran. Jasne tony mogą się przycinać, jeśli panel nie utrzyma żądanego poziomu."
+          }
+        }
+      }
+    },
+    "Peak was lowered automatically because your Mac got warm": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb szczytowy obniżono automatycznie, bo Mac się nagrzał"
           }
         }
       }
@@ -823,12 +813,12 @@
         }
       }
     },
-    "Set the slider above the system maximum, keep this window on that display and click Measure. The boost is turned off briefly for the “before” capture.": {
+    "Sets how many nits full macOS brightness means in each mode. The real output is always limited by the headroom macOS reports.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ustaw suwak powyżej systemowego maksimum, zostaw to okno na tym ekranie i kliknij Zmierz. Podbicie zostanie na chwilę wyłączone na potrzeby zrzutu „przed”."
+            "value": "Określa, ile nitów oznacza pełna jasność macOS w każdym trybie. Realną jasność zawsze ogranicza zapas zgłaszany przez macOS."
           }
         }
       }
@@ -849,6 +839,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pokazuje próbki referencyjne i mierzy różnicę kolorów z podbiciem i bez."
+          }
+        }
+      }
+    },
+    "Standard": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        }
+      }
+    },
+    "Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness, lowered to 1000 nit automatically when your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard: zwykły zakres macOS. 1000 nit: tyle panel MacBooka Pro utrzyma na stałe. 1600 nit: jasność szczytowa, automatycznie obniżana do 1000 nit, gdy Mac się nagrzeje. Skalowany jest cały zakres, więc najniższe poziomy też są jaśniejsze."
           }
         }
       }
@@ -1053,26 +1063,6 @@
         }
       }
     },
-    "Turned off automatically because your Mac got warm": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyłączony automatycznie, bo Mac się nagrzał"
-          }
-        }
-      }
-    },
-    "Turns off “Automatically adjust brightness” while the boost is on, so the light sensor can't pull brightness down, and turns it back on afterwards. Pressing the brightness-down key still turns the boost off.": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyłącza „Automatycznie dostosowuj jasność”, gdy podbicie jest włączone, żeby czujnik światła nie obniżał jasności, i włącza ją z powrotem po wszystkim. Klawisz zmniejszania jasności nadal wyłącza podbicie."
-          }
-        }
-      }
-    },
     "Unknown": {
       "localizations": {
         "pl": {
@@ -1099,16 +1089,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aktualizacje"
-          }
-        }
-      }
-    },
-    "Used to place the slider's knee and cap the boost. The real output is always limited by the headroom macOS reports.": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Służy do wyznaczenia punktu przejścia na suwaku i limitu podbicia. Realna jasność zawsze jest ograniczona zapasem zgłaszanym przez macOS."
           }
         }
       }

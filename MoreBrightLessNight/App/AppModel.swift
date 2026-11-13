@@ -10,11 +10,12 @@ final class AppModel: ObservableObject {
         static let peakAcknowledged = "peakWarningAcknowledged"
         static let onlyOnAC = "onlyOnACPower"
         static let hotKey = "hotKeyChoice"
-        static let pauseAutoBrightness = "pauseAutoBrightness"
+        static let boostLevel = "boostLevel"
+        static let lastBoostLevel = "lastBoostLevel"
     }
 
     @Published private(set) var screens: [ScreenController] = []
-    @Published private(set) var peakModeEnabled: Bool
+    @Published private(set) var boostLevel: BoostLevel
     @Published private(set) var pauseReason: PauseReason?
     @Published private(set) var peakAutoDisabled = false
     @Published private(set) var launchAtLoginError: String?
@@ -23,16 +24,6 @@ final class AppModel: ObservableObject {
         didSet {
             defaults.set(onlyOnACPower, forKey: Keys.onlyOnAC)
             reevaluate()
-        }
-    }
-
-    /// While boosting, macOS auto-brightness is paused (it would pull brightness down under
-    /// the boost) and restored afterwards, like BetterDisplay and Lunar do.
-    @Published var pauseAutoBrightness: Bool {
-        didSet {
-            defaults.set(pauseAutoBrightness, forKey: Keys.pauseAutoBrightness)
-            if !pauseAutoBrightness { screens.forEach { $0.restoreAutoBrightness() } }
-            screens.forEach { $0.applyOverlay(animated: true) }
         }
     }
 
@@ -51,14 +42,16 @@ final class AppModel: ObservableObject {
     private var hotKey: GlobalHotKey?
     private var cancellables = Set<AnyCancellable>()
     private var screenCancellables: [AnyCancellable] = []
-    private var fullBrightnessSnapshot: [String: Double]?
     private var colorTestWindow: NSWindow?
 
     init() {
         let defaults = UserDefaults.standard
-        peakModeEnabled = defaults.bool(forKey: Keys.peakMode)
+        if let saved = defaults.string(forKey: Keys.boostLevel).flatMap(BoostLevel.init(rawValue:)) {
+            boostLevel = saved
+        } else {
+            boostLevel = defaults.bool(forKey: Keys.peakMode) ? .peak : .off // migrate 0.1/0.2
+        }
         onlyOnACPower = defaults.bool(forKey: Keys.onlyOnAC)
-        pauseAutoBrightness = defaults.object(forKey: Keys.pauseAutoBrightness) as? Bool ?? true
         hotKeyChoice = HotKeyChoice(rawValue: defaults.string(forKey: Keys.hotKey) ?? "") ?? .controlOptionCommandB
 
         power.onChange = { [weak self] in self?.reevaluate() }
@@ -99,26 +92,31 @@ final class AppModel: ObservableObject {
 
     /// 0...1 for the variable SF Symbol in the menu bar.
     var iconLevel: Double {
-        let supported = screens.filter(\.supportsEDR)
-        guard !supported.isEmpty else { return 1 }
-        return supported.map(\.position).max() ?? 1
+        guard !screens.isEmpty else { return 1 }
+        return screens.map(\.position).max() ?? 1
     }
 
-    // MARK: Peak mode
+    /// Nits that 100 % means in each mode, for labels (first EDR display's profile).
+    func maxNits(for level: BoostLevel) -> Double {
+        let profile = screens.first(where: \.supportsEDR)?.profile ?? .xdrDefault
+        return level.maxNits(profile)
+    }
 
-    var peakModeBinding: Binding<Bool> {
+    // MARK: Boost level
+
+    var boostLevelBinding: Binding<BoostLevel> {
         Binding(
-            get: { self.peakModeEnabled },
+            get: { self.boostLevel },
             set: { newValue in
                 // Defer so an alert never runs inside a SwiftUI update.
-                DispatchQueue.main.async { self.requestPeakMode(newValue) }
+                DispatchQueue.main.async { self.requestBoostLevel(newValue) }
             }
         )
     }
 
-    func requestPeakMode(_ enable: Bool) {
-        guard enable else {
-            setPeakMode(false)
+    func requestBoostLevel(_ level: BoostLevel) {
+        guard level == .peak else {
+            setBoostLevel(level)
             return
         }
         if thermalState.rawValue >= ProcessInfo.ThermalState.fair.rawValue {
@@ -146,13 +144,15 @@ final class AppModel: ObservableObject {
             defaults.set(true, forKey: Keys.peakAcknowledged)
         }
         peakAutoDisabled = false
-        setPeakMode(true)
+        setBoostLevel(.peak)
     }
 
-    private func setPeakMode(_ enabled: Bool) {
-        guard peakModeEnabled != enabled else { return }
-        peakModeEnabled = enabled
-        defaults.set(enabled, forKey: Keys.peakMode)
+    private func setBoostLevel(_ level: BoostLevel) {
+        guard boostLevel != level else { return }
+        boostLevel = level
+        defaults.set(level.rawValue, forKey: Keys.boostLevel)
+        if level != .off { defaults.set(level.rawValue, forKey: Keys.lastBoostLevel) }
+        overlayLog.info("boost level \(level.rawValue, privacy: .public)")
         screens.forEach { $0.modeDidChange() }
     }
 
@@ -173,28 +173,30 @@ final class AppModel: ObservableObject {
 
     // MARK: Hotkey
 
-    /// Full brightness on: every EDR display to 100 %. Off: back to the previous positions.
+    /// Full brightness on: last used boost level and macOS brightness 100 % on every display.
+    /// Off: standard brightness again (macOS brightness is left where it is).
     func toggleFullBrightness() {
-        let supported = screens.filter(\.supportsEDR)
-        guard !supported.isEmpty else { return }
-        let allFull = supported.allSatisfy { $0.position >= 0.999 }
-        if allFull, let snapshot = fullBrightnessSnapshot {
-            for screen in supported { screen.setPosition(snapshot[screen.key] ?? screen.knee) }
-            fullBrightnessSnapshot = nil
-        } else {
-            fullBrightnessSnapshot = Dictionary(supported.map { ($0.key, $0.position) }, uniquingKeysWith: { first, _ in first })
-            supported.forEach { $0.setPosition(1) }
+        if boostLevel != .off {
+            setBoostLevel(.off)
+            return
         }
+        var level = defaults.string(forKey: Keys.lastBoostLevel).flatMap(BoostLevel.init(rawValue:)) ?? .sustained
+        if level == .peak, !defaults.bool(forKey: Keys.peakAcknowledged) || thermalState.rawValue >= ProcessInfo.ThermalState.fair.rawValue {
+            level = .sustained
+        }
+        if level == .off { level = .sustained }
+        setBoostLevel(level)
+        screens.forEach { $0.setPosition(1) }
     }
 
     // MARK: Safety
 
     func reevaluate(applyOverlays: Bool = true) {
         let thermal = power.thermalState.rawValue
-        // Peak mode turns itself off (persistently) once the Mac leaves the nominal state.
-        if peakModeEnabled, thermal >= ProcessInfo.ThermalState.fair.rawValue {
+        // Peak steps down to sustained (persistently) once the Mac leaves the nominal state.
+        if boostLevel == .peak, thermal >= ProcessInfo.ThermalState.fair.rawValue {
             peakAutoDisabled = true
-            setPeakMode(false)
+            setBoostLevel(.sustained)
         }
 
         let reason: PauseReason?

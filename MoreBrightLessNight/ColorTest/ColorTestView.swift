@@ -52,7 +52,7 @@ struct ColorTestView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Reference Patches")
                 .font(.headline)
-            Text("Set the slider above the system maximum, keep this window on that display and click Measure. The boost is turned off briefly for the “before” capture.")
+            Text("Choose 1000 nit or 1600 nit, keep this window on that display and click Measure. The boost is turned off briefly for the “before” capture.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

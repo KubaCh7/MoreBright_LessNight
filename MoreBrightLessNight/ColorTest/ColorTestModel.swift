@@ -52,7 +52,7 @@ enum ColorTestError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noWindow: return String(localized: "Open the test window on an EDR display first.")
-        case .notBoosted: return String(localized: "Move the slider above the system maximum first, so there is a boost to measure.")
+        case .notBoosted: return String(localized: "Choose 1000 nit or 1600 nit first, so there is a boost to measure.")
         case .noDisplay: return String(localized: "ScreenCaptureKit did not return this display. Check Screen Recording permission in System Settings.")
         case .noImage: return String(localized: "The capture returned no image.")
         }

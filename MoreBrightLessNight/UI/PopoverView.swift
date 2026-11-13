@@ -20,22 +20,7 @@ struct PopoverView: View {
 
             Divider()
 
-            Toggle(isOn: model.peakModeBinding) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("1600-nit mode (peak)")
-                    Group {
-                        if model.peakAutoDisabled {
-                            Text("Turned off automatically because your Mac got warm")
-                        } else {
-                            Text("Full slider uses peak instead of sustained brightness")
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .toggleStyle(.switch)
-            .accessibilityHint(Text("Allows brightness up to the panel's peak level"))
+            BoostLevelPicker()
 
             if let reason = model.pauseReason {
                 Label(reason.title, systemImage: reason.symbol)
@@ -78,9 +63,14 @@ struct ScreenBrightnessRow: View {
             if screen.supportsEDR {
                 BrightnessSlider(
                     value: Binding(get: { screen.position }, set: { screen.setPosition($0) }),
-                    knee: screen.knee,
                     accessibilityLabel: Text("Brightness for \(screen.name)")
                 )
+                if screen.boostLevel != .off {
+                    Text(verbatim: "100 % = \(Int(screen.fullScaleNits.rounded())) nit")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
                 if screen.highlightsClipped {
                     ClippedWarning()
                 }
@@ -145,6 +135,33 @@ struct UpdateBanner: View {
                 .progressViewStyle(.linear)
         default:
             EmptyView()
+        }
+    }
+}
+
+/// Standard / sustained / peak. Full macOS brightness equals the selected maximum.
+struct BoostLevelPicker: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Picker("Maximum brightness", selection: model.boostLevelBinding) {
+                Text("Standard").tag(BoostLevel.off)
+                Text(verbatim: "\(Int(model.maxNits(for: .sustained).rounded())) nit").tag(BoostLevel.sustained)
+                Text(verbatim: "\(Int(model.maxNits(for: .peak).rounded())) nit").tag(BoostLevel.peak)
+            }
+            .pickerStyle(.segmented)
+
+            Group {
+                if model.peakAutoDisabled {
+                    Text("Peak was lowered automatically because your Mac got warm")
+                } else {
+                    Text("Full macOS brightness equals the selected maximum. Brightness keys work as usual.")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

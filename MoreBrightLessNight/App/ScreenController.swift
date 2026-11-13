@@ -46,17 +46,31 @@ enum ScreenStatus: Equatable {
     }
 }
 
-/// One physical display: its EDR headroom, system brightness, requested boost and overlay.
+/// How bright "100 % macOS brightness" should be.
+enum BoostLevel: String, CaseIterable, Identifiable {
+    case off, sustained, peak
+    var id: String { rawValue }
+
+    func maxNits(_ profile: NitsProfile) -> Double {
+        switch self {
+        case .off: return profile.sdrNits
+        case .sustained: return profile.sustainedNits
+        case .peak: return profile.peakNits
+        }
+    }
+}
+
+/// One physical display.
 ///
-/// Slider model (position p in 0...1, top = max gain for the current mode):
-///   knee = 1 / top                          (the point that equals the system maximum)
-///   p <= knee: system brightness = p / knee, gain = 1
-///   p >  knee: system brightness = 1,        gain = p / knee  (linear in nits up to top)
-/// Both sides meet at p == knee with brightness 1 and gain 1, so there is no jump.
+/// Brightness model: "100 % macOS = 100 % of the chosen maximum".
+/// The slider and the brightness keys control macOS brightness exactly as usual. While a
+/// boost level is selected, the overlay multiplies the whole image by a constant gain =
+/// max nits / SDR nits (2× for 1000 nits, 3.2× for 1600 nits on a MacBook Pro XDR), so
+/// macOS 100 % becomes the chosen maximum and every lower step scales with it. Keys,
+/// auto-brightness and Control Center keep working natively; nothing is written back.
 ///
-/// `boostGain` is only ever the user's request. Everything else (mode, headroom, pause
-/// reasons) is applied as a cap when computing `effectiveGain`, never written back, so a
-/// momentary bad reading can't permanently reset the boost.
+/// Displays whose brightness macOS can't control (some external EDR monitors) get a slider
+/// that sets the overlay strength instead.
 final class ScreenController: ObservableObject, Identifiable {
     let displayID: CGDirectDisplayID
     let key: String
@@ -66,7 +80,8 @@ final class ScreenController: ObservableObject, Identifiable {
     @Published private(set) var potentialHeadroom: Double
     @Published private(set) var currentHeadroom: Double
     @Published private(set) var systemBrightness: Double?
-    @Published private(set) var boostGain: Double
+    /// Overlay strength 0...1 for displays without macOS brightness control.
+    @Published private(set) var overlayFraction: Double
     @Published private(set) var appliedGain: Double = 1
     @Published private(set) var highlightsClipped = false
     @Published private(set) var profile: NitsProfile
@@ -84,17 +99,14 @@ final class ScreenController: ObservableObject, Identifiable {
     private let canWriteBrightness: Bool
     private var pendingBrightness: Double?
     private var pendingWrite: DispatchWorkItem?
-    /// Last value macOS actually reported (never optimistic).
     private var lastObservedBrightness: Double?
-    /// Value we last asked macOS for. macOS animates brightness changes, so for a moment it
-    /// reports intermediate values; those are our own echo, not the user pressing F1.
+    /// Value we last asked macOS for; macOS animates toward it, those samples are our echo.
     private var ownTarget: Double?
     private var ownTargetDeadline: Date = .distantPast
     private var boostRequestedSince: Date?
     private var fastPollUntil: Date = .distantPast
     private var headroomTimer: Timer?
     private var headroomTimerInterval: TimeInterval = 0
-    private var autoBrightnessPaused = false
     /// Headroom we follow. Rises immediately; drops only after a dip lasts `dipGrace`, so
     /// short transient dips (Cmd+Tab, Space switch, Mission Control animations) don't dim.
     private var stableHeadroom: Double = 1
@@ -119,14 +131,14 @@ final class ScreenController: ObservableObject, Identifiable {
         } else {
             profile = .xdrDefault
         }
-        let savedGain = UserDefaults.standard.double(forKey: "boost.\(key)")
-        boostGain = savedGain >= 1 ? savedGain : 1
+        overlayFraction = UserDefaults.standard.object(forKey: "overlayFraction.\(key)") as? Double ?? 1
         lastObservedBrightness = systemBrightness
 
-        // If we crashed while auto-brightness was paused, give it back now.
-        if UserDefaults.standard.bool(forKey: Self.autoBrightnessKey(key)) {
+        // 0.2.0 paused auto-brightness while boosting. If that state was left behind, undo it.
+        let legacyKey = "autoBrightnessPaused.\(key)"
+        if UserDefaults.standard.bool(forKey: legacyKey) {
             DisplayServices.setAutoBrightness(displayID, enabled: true)
-            UserDefaults.standard.removeObject(forKey: Self.autoBrightnessKey(key))
+            UserDefaults.standard.removeObject(forKey: legacyKey)
         }
 
         observation = BrightnessObservation(display: displayID) { [weak self] value in
@@ -142,47 +154,35 @@ final class ScreenController: ObservableObject, Identifiable {
         pendingWrite?.cancel()
         pendingWrite = nil
         stopHeadroomMonitor()
-        restoreAutoBrightness()
         overlay?.tearDown()
         overlay = nil
     }
-
-    private static func autoBrightnessKey(_ key: String) -> String { "autoBrightnessPaused.\(key)" }
 
     // MARK: Derived state
 
     var supportsEDR: Bool { potentialHeadroom > 1.0 }
     var controlsSystemBrightness: Bool { canWriteBrightness && systemBrightness != nil }
+    var boostLevel: BoostLevel { model?.boostLevel ?? .off }
 
-    /// Highest gain the slider can reach in the current mode, never above potential headroom.
+    /// Gain that turns macOS 100 % into the chosen maximum, never above potential headroom.
     var maxGain: Double {
         guard supportsEDR else { return 1 }
-        let peak = model?.peakModeEnabled ?? false
-        let topNits = peak ? profile.peakNits : profile.sustainedNits
-        return max(1, min(topNits / profile.sdrNits, potentialHeadroom))
+        return max(1, min(boostLevel.maxNits(profile) / profile.sdrNits, potentialHeadroom))
     }
 
-    /// Slider position where the EDR range starts (0...1).
-    var knee: Double {
-        guard controlsSystemBrightness else { return 0 }
-        return 1 / maxGain
-    }
+    /// Nits that 100 % on the slider means right now.
+    var fullScaleNits: Double { profile.sdrNits * maxGain }
 
     var position: Double {
-        let top = maxGain
-        if controlsSystemBrightness {
-            if boostGain > 1.0001, top > 1 { return min(1, boostGain / top) }
-            return (systemBrightness ?? 1) * knee
-        }
-        guard top > 1 else { return 0 }
-        return min(1, (boostGain - 1) / (top - 1))
+        if controlsSystemBrightness { return systemBrightness ?? 1 }
+        return overlayFraction
     }
 
-    /// What the user asked for, capped by mode and pause reasons (not by live headroom).
+    /// Gain the current mode asks for (capped by pause reasons, not by live headroom).
     var requestedGain: Double {
-        guard supportsEDR, model?.pauseReason == nil else { return 1 }
-        if controlsSystemBrightness, (lastObservedBrightness ?? 1) < 0.9 { return 1 }
-        return min(boostGain, maxGain)
+        guard supportsEDR, boostLevel != .off, model?.pauseReason == nil else { return 1 }
+        if controlsSystemBrightness { return maxGain }
+        return 1 + overlayFraction * (maxGain - 1)
     }
 
     /// What the overlay is asked to render right now.
@@ -223,16 +223,13 @@ final class ScreenController: ObservableObject, Identifiable {
 
     func setPosition(_ newValue: Double) {
         let p = min(max(newValue, 0), 1)
-        let top = maxGain
         if controlsSystemBrightness {
-            let k = knee
-            writeBrightness(k > 0 ? min(1, p / k) : 1)
-            boostGain = top > 1 ? max(1, min(top, p / k)) : 1
+            writeBrightness(p)
         } else {
-            boostGain = 1 + p * (top - 1)
+            overlayFraction = p
+            defaults.set(p, forKey: "overlayFraction.\(key)")
+            applyOverlay(animated: true)
         }
-        defaults.set(boostGain, forKey: "boost.\(key)")
-        applyOverlay(animated: true)
     }
 
     func updateProfile(_ newProfile: NitsProfile) {
@@ -258,7 +255,7 @@ final class ScreenController: ObservableObject, Identifiable {
         applyOverlay(animated: true)
     }
 
-    /// Peak mode toggled. The stored gain (i.e. nits) is kept; only the percentages move.
+    /// Boost level changed.
     func modeDidChange() {
         objectWillChange.send()
         applyOverlay(animated: true)
@@ -273,12 +270,10 @@ final class ScreenController: ObservableObject, Identifiable {
                 stableHeadroom = currentHeadroom
                 headroomDipSince = nil
             }
-            pauseAutoBrightnessIfNeeded()
             startHeadroomMonitor()
         } else {
             boostRequestedSince = nil
             stopHeadroomMonitor()
-            restoreAutoBrightness()
             if highlightsClipped { highlightsClipped = false }
         }
 
@@ -303,26 +298,7 @@ final class ScreenController: ObservableObject, Identifiable {
         startHeadroomMonitor()
     }
 
-    /// Setting toggled off, or app quitting.
-    func restoreAutoBrightness() {
-        guard autoBrightnessPaused else { return }
-        DisplayServices.setAutoBrightness(displayID, enabled: true)
-        autoBrightnessPaused = false
-        defaults.removeObject(forKey: Self.autoBrightnessKey(key))
-        overlayLog.info("display \(self.displayID) auto-brightness restored")
-    }
-
     // MARK: Private
-
-    /// Auto-brightness pulls brightness down under a boost; BetterDisplay and Lunar pause it.
-    private func pauseAutoBrightnessIfNeeded() {
-        guard !autoBrightnessPaused, model?.pauseAutoBrightness ?? false,
-              DisplayServices.autoBrightnessEnabled(displayID) == true else { return }
-        DisplayServices.setAutoBrightness(displayID, enabled: false)
-        autoBrightnessPaused = true
-        defaults.set(true, forKey: Self.autoBrightnessKey(key))
-        overlayLog.info("display \(self.displayID) auto-brightness paused")
-    }
 
     /// Coalesced to ≤ 30 writes/s while dragging. Only ever called from a user action.
     private func writeBrightness(_ value: Double) {
@@ -348,47 +324,24 @@ final class ScreenController: ObservableObject, Identifiable {
         ownTargetDeadline = Date().addingTimeInterval(3)
     }
 
-    /// Someone (or our own animated write) changed brightness.
+    /// Brightness keys, Control Center, auto-brightness or our own slider. We only follow it.
     private func handleBrightnessChange(_ value: Double) {
         let previous = lastObservedBrightness ?? value
         lastObservedBrightness = value
-        defer { applyOverlay(animated: true) }
 
-        // Our own write still in flight, or macOS animating toward the value we asked for.
+        // While our own write is in flight / macOS animates toward it, keep the slider still.
         if pendingWrite != nil { return }
         if let target = ownTarget {
-            let reached = abs(value - target) <= 0.01
-            let movingTowardTarget = abs(value - target) < abs(previous - target) - 0.001
-            if reached {
+            if abs(value - target) <= 0.01 {
                 ownTarget = nil
-                systemBrightness = value
+            } else if Date() < ownTargetDeadline,
+                      abs(value - target) < abs(previous - target) - 0.001 || abs(value - previous) < 0.001 {
                 return
+            } else {
+                ownTarget = nil
             }
-            if Date() < ownTargetDeadline, movingTowardTarget || abs(value - previous) < 0.001 { return }
-            ownTarget = nil // moving away from our target: that's the user
         }
-
-        systemBrightness = value
-        guard boostGain > 1.0001, value <= 0.97 else { return }
-
-        // Brightness-down pressed while boosting. macOS animates the change, so we compare
-        // against full brightness rather than the previous sample. Each 1/16 is one key press.
-        let steps = max(1, Int(((1 - value) * 16).rounded()))
-        let newPosition = position - Double(steps) / 16
-        if controlsSystemBrightness, knee > 0, newPosition > knee + 0.001 {
-            // Still inside the boost range: lower the boost instead, keep the panel at 100 %.
-            boostGain = max(1, newPosition / knee)
-            defaults.set(boostGain, forKey: "boost.\(key)")
-            systemBrightness = 1
-            expectOwnBrightness(1)
-            DisplayServices.setBrightness(displayID, 1)
-            overlayLog.info("display \(self.displayID) brightness key -\(steps) inside boost, gain now \(self.boostGain, format: .fixed(precision: 2))")
-        } else {
-            // Below the knee: hand control back to macOS brightness.
-            boostGain = 1
-            defaults.set(boostGain, forKey: "boost.\(key)")
-            overlayLog.info("display \(self.displayID) brightness key -\(steps), boost off")
-        }
+        if systemBrightness != value { systemBrightness = value }
     }
 
     private func refreshHeadroom() {
