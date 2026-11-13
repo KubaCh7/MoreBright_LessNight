@@ -32,6 +32,13 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Toggle("Hold full brightness while boosting", isOn: $model.holdFullBrightness)
+            } footer: {
+                Text("Keeps system brightness at maximum while the boost is on, so auto-brightness can't pull it down. Pressing the brightness-down key still turns the boost off.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Toggle("1600-nit mode (peak)", isOn: model.peakModeBinding)
             } header: {
                 Text("Peak Brightness")

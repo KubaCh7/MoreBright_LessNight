@@ -327,6 +327,16 @@
         }
       }
     },
+    "Hold full brightness while boosting": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utrzymuj pełną jasność podczas podbicia"
+          }
+        }
+      }
+    },
     "Install": {
       "localizations": {
         "pl": {
@@ -353,6 +363,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Instalowanie aktualizacji…"
+          }
+        }
+      }
+    },
+    "Keeps system brightness at maximum while the boost is on, so auto-brightness can't pull it down. Pressing the brightness-down key still turns the boost off.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trzyma jasność systemową na maksimum, gdy podbicie jest włączone, żeby auto-jasność jej nie obniżała. Klawisz zmniejszania jasności nadal wyłącza podbicie."
           }
         }
       }

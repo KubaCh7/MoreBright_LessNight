@@ -10,6 +10,7 @@ final class AppModel: ObservableObject {
         static let peakAcknowledged = "peakWarningAcknowledged"
         static let onlyOnAC = "onlyOnACPower"
         static let hotKey = "hotKeyChoice"
+        static let holdFullBrightness = "holdFullBrightness"
     }
 
     @Published private(set) var screens: [ScreenController] = []
@@ -23,6 +24,12 @@ final class AppModel: ObservableObject {
             defaults.set(onlyOnACPower, forKey: Keys.onlyOnAC)
             reevaluate()
         }
+    }
+
+    /// While boosting, small external drops of system brightness are reverted to 100 %.
+    /// A deliberate step down (F1) still turns the boost off.
+    @Published var holdFullBrightness: Bool {
+        didSet { defaults.set(holdFullBrightness, forKey: Keys.holdFullBrightness) }
     }
 
     @Published var hotKeyChoice: HotKeyChoice {
@@ -47,6 +54,7 @@ final class AppModel: ObservableObject {
         let defaults = UserDefaults.standard
         peakModeEnabled = defaults.bool(forKey: Keys.peakMode)
         onlyOnACPower = defaults.bool(forKey: Keys.onlyOnAC)
+        holdFullBrightness = defaults.object(forKey: Keys.holdFullBrightness) as? Bool ?? true
         hotKeyChoice = HotKeyChoice(rawValue: defaults.string(forKey: Keys.hotKey) ?? "") ?? .controlOptionCommandB
 
         power.onChange = { [weak self] in self?.reevaluate() }

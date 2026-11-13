@@ -78,7 +78,11 @@ final class ScreenController: ObservableObject, Identifiable {
     private let canWriteBrightness: Bool
     private var pendingBrightness: Double?
     private var pendingWrite: DispatchWorkItem?
-    private var lastOwnWrite: Date = .distantPast
+    /// Value we last asked macOS for. macOS animates brightness changes, so for a moment it
+    /// reports intermediate values; those are our own echo, not the user pressing F1.
+    private var ownTarget: Double?
+    private var ownTargetDeadline: Date = .distantPast
+    private var lastHoldWrite: Date = .distantPast
     private var headroomTimer: Timer?
     private var overlayActiveSince: Date?
     private let defaults = UserDefaults.standard
@@ -158,7 +162,8 @@ final class ScreenController: ObservableObject, Identifiable {
 
     private var requestedGain: Double {
         guard supportsEDR, model?.pauseReason == nil else { return 1 }
-        if controlsSystemBrightness, (systemBrightness ?? 1) < 0.995 { return 1 }
+        // Small drift below 100 % (auto-brightness, rounding) must not kill the boost.
+        if controlsSystemBrightness, (systemBrightness ?? 1) < 0.9 { return 1 }
         return min(boostGain, maxGain)
     }
 
@@ -252,7 +257,7 @@ final class ScreenController: ObservableObject, Identifiable {
         if let current = systemBrightness, abs(current - value) < 0.002 { return }
         systemBrightness = value
         pendingBrightness = value
-        lastOwnWrite = Date()
+        expectOwnBrightness(value)
         guard pendingWrite == nil else { return }
         let work = DispatchWorkItem { [weak self] in
             guard let self, let value = self.pendingBrightness else { return }
@@ -260,22 +265,56 @@ final class ScreenController: ObservableObject, Identifiable {
             self.pendingBrightness = nil
             DisplayServices.setBrightness(self.displayID, value)
             self.observation?.noteOwnWrite(value)
-            self.lastOwnWrite = Date()
+            self.expectOwnBrightness(value)
         }
         pendingWrite = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0 / 30.0, execute: work)
     }
 
+    private func expectOwnBrightness(_ value: Double) {
+        ownTarget = value
+        ownTargetDeadline = Date().addingTimeInterval(3)
+    }
+
     /// Someone else changed brightness (F1/F2, Control Center, auto-brightness...).
-    /// We follow it. We never write back or "correct" it.
     private func handleBrightnessChange(_ value: Double) {
-        if pendingWrite != nil || Date().timeIntervalSince(lastOwnWrite) < 1.0 { return } // our own echo
+        // Our own write still in flight or still animating: ignore intermediate values.
+        if pendingWrite != nil { return }
+        if let target = ownTarget {
+            let reached = abs(value - target) <= 0.01
+            if !reached, Date() < ownTargetDeadline { return }
+            ownTarget = nil
+            if reached {
+                systemBrightness = value
+                return
+            }
+        }
+
+        let previous = systemBrightness ?? value
         systemBrightness = value
-        if value < 0.995, boostGain > 1 {
-            boostGain = 1
-            defaults.set(boostGain, forKey: "boost.\(key)")
+
+        if boostGain > 1, value < 0.995 {
+            let deliberateStep = previous - value >= 0.04 // one F1 press is 1/16
+            if deliberateStep {
+                // The user turned brightness down: follow them, drop the boost.
+                boostGain = 1
+                defaults.set(boostGain, forKey: "boost.\(key)")
+            } else if model?.holdFullBrightness ?? false {
+                // Small drift (auto-brightness etc.) while boosting: put 100 % back.
+                restoreFullBrightness()
+            }
         }
         applyOverlay(animated: true)
+    }
+
+    /// "Hold full brightness" setting. At most once every 2 s, only while boosting.
+    private func restoreFullBrightness() {
+        guard controlsSystemBrightness, Date().timeIntervalSince(lastHoldWrite) > 2 else { return }
+        lastHoldWrite = Date()
+        expectOwnBrightness(1)
+        systemBrightness = 1
+        DisplayServices.setBrightness(displayID, 1)
+        observation?.noteOwnWrite(1)
     }
 
     private func refreshHeadroom() {
