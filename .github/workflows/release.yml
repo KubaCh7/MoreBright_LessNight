@@ -1,0 +1,78 @@
+name: Release
+
+# Push a tag like v0.2.0 (or run manually with a version) to publish a DMG.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without the leading v, e.g. 0.2.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          if [ -n "$INPUT_VERSION" ]; then V="$INPUT_VERSION"; else V="${GITHUB_REF_NAME#v}"; fi
+          if ! echo "$V" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'; then echo "Bad version: $V"; exit 1; fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+          echo "DMG=MoreBrightLessNight-$V.dmg" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          set -o pipefail
+          xcodebuild -project MoreBrightLessNight.xcodeproj \
+            -scheme MoreBrightLessNight \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            CODE_SIGN_IDENTITY=- \
+            build 2>&1 | tee build.log | grep -E "error:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Create DMG
+        run: |
+          APP=build/Build/Products/Release/MoreBrightLessNight.app
+          codesign --verify --deep --strict "$APP"
+          /usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" "$APP/Contents/Info.plist"
+          STAGE="$(mktemp -d)"
+          ditto "$APP" "$STAGE/MoreBrightLessNight.app"
+          ln -s /Applications "$STAGE/Applications"
+          for i in 1 2 3 4; do
+            hdiutil create -volname "MoreBrightLessNight" -srcfolder "$STAGE" -ov -format UDZO "$DMG" && break
+            sleep 5
+          done
+          test -f "$DMG"
+          shasum -a 256 "$DMG" > "$DMG.sha256"
+          cat "$DMG.sha256"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          **Instalacja:** otwórz DMG i przeciągnij MoreBrightLessNight do folderu Aplikacje.
+
+          Aplikacja jest podpisana ad-hoc (bez Apple Developer ID), więc przy pierwszym uruchomieniu macOS ją zablokuje. Otwórz Ustawienia systemowe → Prywatność i ochrona → „Otwórz mimo to”, albo w Terminalu:
+          `xattr -dr com.apple.quarantine /Applications/MoreBrightLessNight.app`
+
+          Kolejne wersje instalują się z poziomu aplikacji (Ustawienia → Ogólne → Aktualizacje).
+          NOTES
+          gh release create "v$VERSION" "$DMG" "$DMG.sha256" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "MoreBrightLessNight $VERSION" \
+            --notes-file notes.md \
+            --generate-notes

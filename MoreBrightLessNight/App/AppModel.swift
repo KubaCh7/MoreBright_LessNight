@@ -33,6 +33,7 @@ final class AppModel: ObservableObject {
     }
 
     let power = PowerMonitor()
+    let updates = UpdateManager()
     var thermalState: ProcessInfo.ThermalState { power.thermalState }
 
     private let defaults = UserDefaults.standard
@@ -49,6 +50,10 @@ final class AppModel: ObservableObject {
         hotKeyChoice = HotKeyChoice(rawValue: defaults.string(forKey: Keys.hotKey) ?? "") ?? .controlOptionCommandB
 
         power.onChange = { [weak self] in self?.reevaluate() }
+
+        updates.objectWillChange
+            .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
 
         NotificationCenter.default
             .publisher(for: NSApplication.didChangeScreenParametersNotification)

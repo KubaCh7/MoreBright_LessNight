@@ -34,6 +34,34 @@ Aplikacja menu bar na macOS 14+ (Apple Silicon), która podnosi jasność SDR po
 
 Popover → **Test kolorów…**: 12 próbek (R, G, B, C, M, Y, trzy szarości, biel, dwie karnacje). **Zmierz** robi dwa zrzuty przez ScreenCaptureKit (overlay na chwilę wyłączony, potem włączony), dla każdej próbki liczy realne wzmocnienie luminancji i CIEDE2000 po wyrównaniu luminancji, czyli wyłącznie przesunięcie odcienia/nasycenia. Próbki, które nie osiągnęły oczekiwanego wzmocnienia, są oznaczone jako przycięte. Wymaga uprawnienia Nagrywanie ekranu.
 
+## Pobieranie
+
+Najnowszy DMG: [Releases](https://github.com/KubaCh7/MoreBright_LessNight/releases/latest). Otwórz DMG i przeciągnij aplikację do folderu **Aplikacje**.
+
+Aplikacja nie ma podpisu Apple Developer ID ani notaryzacji, więc przy pierwszym uruchomieniu macOS ją zablokuje. Otwórz **Ustawienia systemowe → Prywatność i ochrona → Otwórz mimo to** albo wpisz:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/MoreBrightLessNight.app
+```
+
+## Aktualizacje
+
+- Aplikacja raz na dobę (15 s po starcie, potem co godzinę sprawdza, czy minęła doba) pyta `api.github.com` o najnowsze wydanie. Wyłączysz to w Ustawienia → Ogólne → Aktualizacje. Tam jest też „Sprawdź teraz”.
+- Gdy jest nowsza wersja, popover pokazuje „Zainstaluj”. Instalacja: pobranie DMG, porównanie SHA-256 z plikiem `.sha256` z tego samego wydania, montowanie, sprawdzenie bundle ID i `codesign --verify --strict`, a po zamknięciu aplikacji podmiana bundla (z rollbackiem przy błędzie) i ponowne uruchomienie.
+- Działa tylko, gdy aplikacja leży w zapisywalnym folderze (np. /Applications). Z App Translocation (uruchomienie prosto z DMG) aplikacja poprosi o przeniesienie.
+
+### Wydawanie nowej wersji
+
+```bash
+git tag v0.2.0
+```
+
+```bash
+git push origin v0.2.0
+```
+
+Workflow `.github/workflows/release.yml` zbuduje aplikację z `MARKETING_VERSION` wziętym z tagu, zrobi `MoreBrightLessNight-0.2.0.dmg` i `.dmg.sha256` i opublikuje GitHub Release. Można też uruchomić go ręcznie (Actions → Release → Run workflow).
+
 ## Budowanie
 
 Wymagania: macOS 14+, Xcode 16+ (projekt używa folderów synchronizowanych, `objectVersion 77`), Apple Silicon. Brak zewnętrznych zależności.
@@ -73,4 +101,6 @@ CI (`.github/workflows/build.yml`) buduje projekt na `macos-15` przy każdym pus
 9. **Test ΔE zależy od ScreenCaptureKit.** Na macOS 14 SCK zwykle zwraca SDR (wartości przycięte do 1.0), więc pomiar nie zobaczy boostu i UI to jawnie zgłosi. Na macOS 15+ używany jest `captureDynamicRange = .hdrLocalDisplay`. ΔE liczone jest przy założeniu prymarów sRGB w zrzucie. Jeśli system odda linear P3, wartości ΔE będą lekko przesunięte, ale „0 = brak przesunięcia” nadal obowiązuje.
 10. **Ekrany zewnętrzne.** Ekrany bez EDR są oznaczone jako niewspierane. Zewnętrzne ekrany z EDR, które nie obsługują `DisplayServices`, mają suwak sterujący wyłącznie overlayem (0% = jasność systemu).
 11. **Suwak w stylu Centrum sterowania jest własnym widokiem**, bo natywny `Slider` nie ma tego wyglądu. Dla VoiceOver i klawiatury ma `accessibilityRepresentation` w postaci standardowego `Slider` oraz obsługę strzałek.
-12. **Skrót globalny** to jedna z kilku gotowych kombinacji (⌃⌥⌘B / L / ↑). Brak nagrywarki dowolnego skrótu.
+12. **Aktualizacje bez Developer ID.** Weryfikacja opiera się na HTTPS do GitHuba i SHA-256 z tego samego wydania. Chroni to przed uszkodzonym pobraniem, ale nie przed kimś, kto przejmie repozytorium lub konto. Prawdziwa ochrona wymaga Developer ID i sprawdzania Team ID (albo Sparkle z kluczem EdDSA).
+13. **Uprawnienie Nagrywanie ekranu znika po każdej aktualizacji**, bo przy podpisie ad-hoc macOS wiąże je z hashem binarki. Dotyczy tylko testu kolorów.
+14. **Skrót globalny** to jedna z kilku gotowych kombinacji (⌃⌥⌘B / L / ↑). Brak nagrywarki dowolnego skrótu.

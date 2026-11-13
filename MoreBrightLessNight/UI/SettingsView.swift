@@ -53,6 +53,8 @@ struct GeneralSettingsView: View {
                     .foregroundStyle(.secondary)
             }
 
+            UpdateSettingsSection(updates: model.updates)
+
             Section {
                 LabeledContent("Thermal state") {
                     Text(verbatim: model.thermalState.localizedName)
@@ -74,6 +76,62 @@ struct GeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct UpdateSettingsSection: View {
+    @ObservedObject var updates: UpdateManager
+
+    var body: some View {
+        Section {
+            LabeledContent("Current version") {
+                Text(verbatim: updates.currentVersion).monospacedDigit()
+            }
+            Toggle("Check for updates automatically", isOn: $updates.automaticChecks)
+            HStack {
+                status
+                Spacer()
+                if case .available = updates.state {
+                    Button("Install and Relaunch") { updates.installUpdate() }
+                } else {
+                    Button("Check Now") { updates.checkNow() }
+                        .disabled(updates.isBusy)
+                }
+            }
+            if let release = updates.availableRelease {
+                Link("Release Notes", destination: release.htmlUrl)
+            }
+        } header: {
+            Text("Updates")
+        } footer: {
+            if let lastChecked = updates.lastChecked {
+                Text("Last checked: \(lastChecked.formatted(date: .abbreviated, time: .shortened))")
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var status: some View {
+        switch updates.state {
+        case .idle:
+            EmptyView()
+        case .checking:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Checking for updates…")
+            }
+        case .upToDate:
+            Text("MoreBrightLessNight is up to date.").foregroundStyle(.secondary)
+        case .available(let version):
+            Text("Version \(version) is available")
+        case .downloading(let fraction):
+            ProgressView(value: fraction) { Text("Downloading update…") }
+        case .installing:
+            Text("Installing update…")
+        case .failed(let message):
+            Text(verbatim: message).foregroundStyle(.secondary)
+        }
     }
 }
 

@@ -43,6 +43,8 @@ struct PopoverView: View {
                     .foregroundStyle(.secondary)
             }
 
+            UpdateBanner(updates: model.updates)
+
             Divider()
 
             HStack {
@@ -115,5 +117,34 @@ struct ClippedWarning: View {
         }
         .font(.caption)
         .foregroundStyle(.secondary)
+    }
+}
+
+/// Shown in the popover only when there is something to act on.
+struct UpdateBanner: View {
+    @ObservedObject var updates: UpdateManager
+
+    var body: some View {
+        switch updates.state {
+        case .available(let version):
+            HStack {
+                Label {
+                    Text("Version \(version) is available")
+                } icon: {
+                    Image(systemName: "arrow.down.circle.fill")
+                }
+                .font(.callout)
+                Spacer()
+                Button("Install") { updates.installUpdate() }
+                    .controlSize(.small)
+            }
+        case .downloading(let fraction):
+            ProgressView(value: fraction) { Text("Downloading update…").font(.caption) }
+        case .installing:
+            ProgressView { Text("Installing update…").font(.caption) }
+                .progressViewStyle(.linear)
+        default:
+            EmptyView()
+        }
     }
 }

@@ -87,6 +87,36 @@
         }
       }
     },
+    "Check Now": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdź teraz"
+          }
+        }
+      }
+    },
+    "Check for updates automatically": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatycznie sprawdzaj aktualizacje"
+          }
+        }
+      }
+    },
+    "Checking for updates…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprawdzanie aktualizacji…"
+          }
+        }
+      }
+    },
     "Color Test": {
       "localizations": {
         "pl": {
@@ -123,6 +153,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bieżący zapas EDR"
+          }
+        }
+      }
+    },
+    "Current version": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bieżąca wersja"
           }
         }
       }
@@ -187,6 +227,16 @@
         }
       }
     },
+    "Downloading update…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobieranie aktualizacji…"
+          }
+        }
+      }
+    },
     "Expected gain": {
       "localizations": {
         "pl": {
@@ -247,6 +297,16 @@
         }
       }
     },
+    "GitHub returned an error.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub zwrócił błąd."
+          }
+        }
+      }
+    },
     "Green": {
       "localizations": {
         "pl": {
@@ -267,12 +327,58 @@
         }
       }
     },
+    "Install": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zainstaluj"
+          }
+        }
+      }
+    },
+    "Install and Relaunch": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zainstaluj i uruchom ponownie"
+          }
+        }
+      }
+    },
+    "Installing update…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instalowanie aktualizacji…"
+          }
+        }
+      }
+    },
     "Keyboard Shortcut": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Skrót klawiszowy"
+          }
+        }
+      }
+    },
+    "Last checked: %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnio sprawdzono: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness for %@"
           }
         }
       }
@@ -353,6 +459,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "Średni szary"
+          }
+        }
+      }
+    },
+    "MoreBrightLessNight can't replace itself in its current folder. Move it to the Applications folder.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoreBrightLessNight nie może się podmienić w obecnym folderze. Przenieś ją do folderu Aplikacje."
+          }
+        }
+      }
+    },
+    "MoreBrightLessNight is up to date.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoreBrightLessNight jest aktualna."
+          }
+        }
+      }
+    },
+    "Move MoreBrightLessNight to the Applications folder to install updates.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przenieś MoreBrightLessNight do folderu Aplikacje, żeby instalować aktualizacje."
           }
         }
       }
@@ -597,6 +733,16 @@
         }
       }
     },
+    "Release Notes": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informacje o wersji"
+          }
+        }
+      }
+    },
     "Requested gain": {
       "localizations": {
         "pl": {
@@ -747,12 +893,62 @@
         }
       }
     },
+    "The disk image doesn't contain the app.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obraz dysku nie zawiera aplikacji."
+          }
+        }
+      }
+    },
+    "The download is damaged (checksum mismatch).": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrany plik jest uszkodzony (niezgodna suma kontrolna)."
+          }
+        }
+      }
+    },
+    "The downloaded app is not MoreBrightLessNight.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pobrana aplikacja to nie MoreBrightLessNight."
+          }
+        }
+      }
+    },
+    "The downloaded app's code signature is invalid.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podpis kodu pobranej aplikacji jest nieprawidłowy."
+          }
+        }
+      }
+    },
     "The extra brightness turns off automatically when the thermal state is serious, when the battery is under 20 percent and while the display sleeps.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Dodatkowa jasność wyłącza się automatycznie przy poważnym stanie termicznym, gdy bateria spadnie poniżej 20 procent i gdy ekran jest uśpiony."
+          }
+        }
+      }
+    },
+    "The release has no checksum file, so the update can't be verified.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wydanie nie ma pliku sumy kontrolnej, więc aktualizacji nie da się zweryfikować."
           }
         }
       }
@@ -847,12 +1043,38 @@
         }
       }
     },
+    "Updates": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktualizacje"
+          }
+        }
+      }
+    },
     "Used to place the slider's knee and cap the boost. The real output is always limited by the headroom macOS reports.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Służy do wyznaczenia punktu przejścia na suwaku i limitu podbicia. Realna jasność zawsze jest ograniczona zapasem zgłaszanym przez macOS."
+          }
+        }
+      }
+    },
+    "Version %@ is available": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostępna jest wersja %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness for %@"
           }
         }
       }
