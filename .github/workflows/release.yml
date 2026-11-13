@@ -70,9 +70,17 @@ jobs:
 
           Kolejne wersje instalują się z poziomu aplikacji (Ustawienia → Ogólne → Aktualizacje).
           NOTES
-          gh release create "v$VERSION" "$DMG" "$DMG.sha256" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "MoreBrightLessNight $VERSION" \
-            --notes-file notes.md \
-            --generate-notes
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # Re-run for an existing version: replace all assets so only the current DMG remains.
+            for asset in $(gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name'); do
+              gh release delete-asset "v$VERSION" "$asset" --repo "$GITHUB_REPOSITORY" --yes
+            done
+            gh release upload "v$VERSION" "$DMG" "$DMG.sha256" --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "v$VERSION" "$DMG" "$DMG.sha256" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "MoreBrightLessNight $VERSION" \
+              --notes-file notes.md \
+              --generate-notes
+          fi
