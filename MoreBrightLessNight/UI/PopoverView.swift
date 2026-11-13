@@ -22,6 +22,9 @@ struct PopoverView: View {
 
             BoostLevelPicker()
 
+            Toggle("Pause during video", isOn: $model.pauseForVideo)
+                .toggleStyle(.switch)
+
             if let reason = model.pauseReason {
                 Label(reason.title, systemImage: reason.symbol)
                     .font(.callout)

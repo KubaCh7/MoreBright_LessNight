@@ -41,6 +41,13 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Toggle("Pause during video", isOn: $model.pauseForVideo)
+            } footer: {
+                Text("HDR video already uses the extra brightness, and the boost would blow out its highlights. While a player or browser plays video, the boost pauses and comes back when playback stops. SDR video pauses it too: macOS doesn't tell apps whether a video is HDR.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 Picker("Toggle full brightness", selection: $model.hotKeyChoice) {
                     ForEach(HotKeyChoice.allCases) { choice in
                         Text(verbatim: choice.title).tag(choice)

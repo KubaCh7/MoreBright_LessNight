@@ -3,7 +3,7 @@ import Combine
 import os
 
 enum PauseReason: Equatable {
-    case thermal, screensAsleep, lowBattery, onBattery
+    case thermal, screensAsleep, lowBattery, onBattery, videoPlaying
 
     var title: String {
         switch self {
@@ -11,6 +11,7 @@ enum PauseReason: Equatable {
         case .screensAsleep: return String(localized: "Paused: display asleep or locked")
         case .lowBattery: return String(localized: "Paused: low battery")
         case .onBattery: return String(localized: "Paused: on battery power")
+        case .videoPlaying: return String(localized: "Paused: video playing")
         }
     }
 
@@ -20,6 +21,7 @@ enum PauseReason: Equatable {
         case .screensAsleep: return "moon.zzz.fill"
         case .lowBattery: return "battery.25percent"
         case .onBattery: return "powerplug"
+        case .videoPlaying: return "play.rectangle.fill"
         }
     }
 }

@@ -12,11 +12,21 @@ final class AppModel: ObservableObject {
         static let hotKey = "hotKeyChoice"
         static let boostLevel = "boostLevel"
         static let technique = "boostTechnique"
+        static let pauseForVideo = "pauseForVideo"
         static let lastBoostLevel = "lastBoostLevel"
     }
 
     @Published private(set) var screens: [ScreenController] = []
     @Published private(set) var boostLevel: BoostLevel
+
+    /// Step aside while video plays, so HDR video isn't blown out by the boost.
+    @Published var pauseForVideo: Bool {
+        didSet {
+            defaults.set(pauseForVideo, forKey: Keys.pauseForVideo)
+            if pauseForVideo { video.start() } else { video.stop() }
+            reevaluate()
+        }
+    }
 
     @Published var technique: BoostTechnique {
         didSet {
@@ -44,6 +54,7 @@ final class AppModel: ObservableObject {
     }
 
     let power = PowerMonitor()
+    let video = VideoPlaybackMonitor()
     let updates = UpdateManager()
     var thermalState: ProcessInfo.ThermalState { power.thermalState }
 
@@ -55,6 +66,7 @@ final class AppModel: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
+        pauseForVideo = defaults.object(forKey: Keys.pauseForVideo) as? Bool ?? true
         technique = defaults.string(forKey: Keys.technique).flatMap(BoostTechnique.init(rawValue:)) ?? .gammaTable
         if let saved = defaults.string(forKey: Keys.boostLevel).flatMap(BoostLevel.init(rawValue:)) {
             boostLevel = saved
@@ -65,6 +77,8 @@ final class AppModel: ObservableObject {
         hotKeyChoice = HotKeyChoice(rawValue: defaults.string(forKey: Keys.hotKey) ?? "") ?? .controlOptionCommandB
 
         power.onChange = { [weak self] in self?.reevaluate() }
+        video.onChange = { [weak self] in self?.reevaluate() }
+        if pauseForVideo { video.start() }
 
         updates.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
@@ -218,6 +232,8 @@ final class AppModel: ObservableObject {
             reason = .lowBattery
         } else if onlyOnACPower, !power.isOnACPower {
             reason = .onBattery
+        } else if pauseForVideo, video.isPlayingVideo {
+            reason = .videoPlaying
         } else {
             reason = nil
         }

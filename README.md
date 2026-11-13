@@ -48,6 +48,8 @@ Wybór w popoverze: **Standard / 1000 nit / 1600 nit**. Zasada: **100% jasności
 
 ### Bezpieczeństwo
 
+- **Wstrzymuj podczas wideo** (przełącznik w popoverze i w Ustawieniach, domyślnie włączony). Wideo HDR samo korzysta z zapasu EDR, a podbicie tabelą przepala jego jasne partie. Co 2 s aplikacja czyta publicznym `IOPMCopyAssertionsByProcess` blokady uśpienia ekranu, które trzymają odtwarzacze i przeglądarki podczas wideo (WebKit, Chrome „Video Wake Lock”, TV, QuickTime, IINA, VLC…), i na ten czas wstrzymuje podbicie. macOS nie mówi, czy wideo jest HDR, więc wideo SDR też je wstrzymuje.
+
 - Overlay wyłącza się przy `thermalState >= .serious`, na baterii poniżej 20%, przy uśpieniu ekranu lub systemu, blokadzie ekranu, wygaszaczu, przełączeniu użytkownika i podłączeniu lub odłączeniu ekranu, oraz (opcjonalnie) na baterii w ogóle. Po ustąpieniu przyczyny wraca po 5 s, żeby macOS zdążył odbudować EDR.
 - Tryb 1600 wyłącza się sam (trwale) od `.fair` w górę. Pierwsze włączenie wymaga potwierdzenia w dialogu.
 - Overlay to zwykłe okno procesu. Crash albo kill = okno znika. Aplikacja nie zmienia na stałe niczego poza zwykłą jasnością systemu, którą ustawia użytkownik.
@@ -135,3 +137,4 @@ CI (`.github/workflows/build.yml`) buduje projekt na `macos-15` przy każdym pus
 13. **Aktualizacje bez Developer ID.** Weryfikacja opiera się na HTTPS do GitHuba i SHA-256 z tego samego wydania. Chroni to przed uszkodzonym pobraniem, ale nie przed kimś, kto przejmie repozytorium lub konto. Prawdziwa ochrona wymaga Developer ID i sprawdzania Team ID (albo Sparkle z kluczem EdDSA).
 14. **Uprawnienie Nagrywanie ekranu znika po każdej aktualizacji**, bo przy podpisie ad-hoc macOS wiąże je z hashem binarki. Dotyczy tylko testu kolorów.
 15. **Skrót globalny** to jedna z kilku gotowych kombinacji (⌃⌥⌘B / L / ↑). Brak nagrywarki dowolnego skrótu.
+16. **Wykrywanie wideo to heurystyka.** Aplikacje „caffeine” (np. Amphetamine) są ignorowane, ale przeglądarka trzymająca blokadę ekranu z innego powodu (np. WebRTC) też wstrzyma podbicie. W razie problemów wyłącz przełącznik.

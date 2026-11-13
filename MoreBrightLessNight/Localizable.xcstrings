@@ -347,6 +347,16 @@
         }
       }
     },
+    "HDR video already uses the extra brightness, and the boost would blow out its highlights. While a player or browser plays video, the boost pauses and comes back when playback stops. SDR video pauses it too: macOS doesn't tell apps whether a video is HDR.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wideo HDR samo korzysta z dodatkowej jasności, a podbicie przepaliłoby jasne partie. Gdy odtwarzacz lub przeglądarka odtwarza wideo, podbicie się wstrzymuje i wraca po zakończeniu. Wideo SDR też je wstrzymuje, bo macOS nie mówi aplikacjom, czy wideo jest HDR."
+          }
+        }
+      }
+    },
     "Highlights clipped: the panel can't show this level right now": {
       "localizations": {
         "pl": {
@@ -643,6 +653,16 @@
         }
       }
     },
+    "Pause during video": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymuj podczas wideo"
+          }
+        }
+      }
+    },
     "Paused: display asleep or locked": {
       "localizations": {
         "pl": {
@@ -679,6 +699,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wstrzymane: limit termiczny"
+          }
+        }
+      }
+    },
+    "Paused: video playing": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: odtwarzanie wideo"
           }
         }
       }
