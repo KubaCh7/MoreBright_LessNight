@@ -191,7 +191,7 @@ final class ColorTestModel: ObservableObject {
             let yb = max(b.luminance, 1e-6), ya = max(a.luminance, 1e-6)
             let gain = ya / yb
             // Compare at equal luminance: what remains is the hue/chroma shift.
-            let deltaE = ColorMath.deltaE2000(b.lab, (a * (yb / ya)).lab)
+            let deltaE = ColorMath.deltaE2000(b.lab, a.scaled(by: yb / ya).lab)
             patches.append(PatchResult(id: patch.id, nameKey: patch.nameKey, deltaE: deltaE,
                                        measuredGain: gain, clipped: gain < expected * 0.92))
         }

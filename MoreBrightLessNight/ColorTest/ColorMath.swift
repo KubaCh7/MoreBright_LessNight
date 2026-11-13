@@ -4,8 +4,8 @@ import Foundation
 struct LinearRGB {
     var r: Double, g: Double, b: Double
 
-    static func * (lhs: LinearRGB, rhs: Double) -> LinearRGB {
-        LinearRGB(r: lhs.r * rhs, g: lhs.g * rhs, b: lhs.b * rhs)
+    func scaled(by factor: Double) -> LinearRGB {
+        LinearRGB(r: r * factor, g: g * factor, b: b * factor)
     }
 
     /// Relative luminance (Y) with sRGB/Rec.709 primaries.
@@ -29,53 +29,73 @@ struct Lab { var l: Double, a: Double, b: Double }
 enum ColorMath {
     /// CIEDE2000 (Sharma, Wu, Dalal 2005).
     static func deltaE2000(_ c1: Lab, _ c2: Lab) -> Double {
-        func rad(_ degrees: Double) -> Double { degrees * .pi / 180 }
-        func hue(_ b: Double, _ a: Double) -> Double {
-            if a == 0, b == 0 { return 0 }
-            let h = atan2(b, a) * 180 / .pi
-            return h < 0 ? h + 360 : h
-        }
-        let pow25to7 = pow(25.0, 7)
+        let c1ab: Double = hypot(c1.a, c1.b)
+        let c2ab: Double = hypot(c2.a, c2.b)
+        let cMean: Double = (c1ab + c2ab) / 2
+        let g: Double = 0.5 * (1 - sqrt(seventh(cMean) / (seventh(cMean) + pow25to7)))
+        let a1p: Double = (1 + g) * c1.a
+        let a2p: Double = (1 + g) * c2.a
+        let c1p: Double = hypot(a1p, c1.b)
+        let c2p: Double = hypot(a2p, c2.b)
+        let h1p: Double = hueDegrees(c1.b, a1p)
+        let h2p: Double = hueDegrees(c2.b, a2p)
+        let chromaProduct: Double = c1p * c2p
 
-        let c1ab = hypot(c1.a, c1.b), c2ab = hypot(c2.a, c2.b)
-        let cMean = (c1ab + c2ab) / 2
-        let g = 0.5 * (1 - sqrt(pow(cMean, 7) / (pow(cMean, 7) + pow25to7)))
-        let a1p = (1 + g) * c1.a, a2p = (1 + g) * c2.a
-        let c1p = hypot(a1p, c1.b), c2p = hypot(a2p, c2.b)
-        let h1p = hue(c1.b, a1p), h2p = hue(c2.b, a2p)
-
-        let dLp = c2.l - c1.l
-        let dCp = c2p - c1p
-        var dhp = 0.0
-        if c1p * c2p != 0 {
+        let dLp: Double = c2.l - c1.l
+        let dCp: Double = c2p - c1p
+        var dhp: Double = 0
+        if chromaProduct != 0 {
             dhp = h2p - h1p
             if dhp > 180 { dhp -= 360 } else if dhp < -180 { dhp += 360 }
         }
-        let dHp = 2 * sqrt(c1p * c2p) * sin(rad(dhp / 2))
+        let dHp: Double = 2 * sqrt(chromaProduct) * sin(radians(dhp / 2))
 
-        let lMean = (c1.l + c2.l) / 2
-        let cpMean = (c1p + c2p) / 2
-        var hpMean = h1p + h2p
-        if c1p * c2p != 0 {
+        let lMean: Double = (c1.l + c2.l) / 2
+        let cpMean: Double = (c1p + c2p) / 2
+        let hSum: Double = h1p + h2p
+        var hpMean: Double = hSum
+        if chromaProduct != 0 {
             if abs(h1p - h2p) > 180 {
-                hpMean = (h1p + h2p < 360) ? (h1p + h2p + 360) / 2 : (h1p + h2p - 360) / 2
+                hpMean = hSum < 360 ? (hSum + 360) / 2 : (hSum - 360) / 2
             } else {
-                hpMean = (h1p + h2p) / 2
+                hpMean = hSum / 2
             }
         }
 
-        let t = 1 - 0.17 * cos(rad(hpMean - 30)) + 0.24 * cos(rad(2 * hpMean))
-            + 0.32 * cos(rad(3 * hpMean + 6)) - 0.20 * cos(rad(4 * hpMean - 63))
-        let dTheta = 30 * exp(-pow((hpMean - 275) / 25, 2))
-        let rc = 2 * sqrt(pow(cpMean, 7) / (pow(cpMean, 7) + pow25to7))
-        let lTerm = pow(lMean - 50, 2)
-        let sl = 1 + 0.015 * lTerm / sqrt(20 + lTerm)
-        let sc = 1 + 0.045 * cpMean
-        let sh = 1 + 0.015 * cpMean * t
-        let rt = -sin(rad(2 * dTheta)) * rc
+        let t1: Double = 0.17 * cos(radians(hpMean - 30))
+        let t2: Double = 0.24 * cos(radians(2 * hpMean))
+        let t3: Double = 0.32 * cos(radians(3 * hpMean + 6))
+        let t4: Double = 0.20 * cos(radians(4 * hpMean - 63))
+        let t: Double = 1 - t1 + t2 + t3 - t4
+        let thetaArg: Double = (hpMean - 275) / 25
+        let dTheta: Double = 30 * exp(-(thetaArg * thetaArg))
+        let rc: Double = 2 * sqrt(seventh(cpMean) / (seventh(cpMean) + pow25to7))
+        let lOffset: Double = (lMean - 50) * (lMean - 50)
+        let sl: Double = 1 + 0.015 * lOffset / sqrt(20 + lOffset)
+        let sc: Double = 1 + 0.045 * cpMean
+        let sh: Double = 1 + 0.015 * cpMean * t
+        let rt: Double = -sin(radians(2 * dTheta)) * rc
 
-        let l = dLp / sl, c = dCp / sc, h = dHp / sh
-        return sqrt(l * l + c * c + h * h + rt * c * h)
+        let dl: Double = dLp / sl
+        let dc: Double = dCp / sc
+        let dh: Double = dHp / sh
+        let sum: Double = dl * dl + dc * dc + dh * dh + rt * dc * dh
+        return sum.squareRoot()
+    }
+
+    private static let pow25to7: Double = 6_103_515_625 // 25^7
+
+    private static func seventh(_ x: Double) -> Double {
+        let x2 = x * x
+        return x2 * x2 * x2 * x
+    }
+
+    private static func radians(_ degrees: Double) -> Double { degrees * Double.pi / 180 }
+
+    private static func hueDegrees(_ b: Double, _ a: Double) -> Double {
+        if a == 0, b == 0 { return 0 }
+        let h = atan2(b, a) * 180 / Double.pi
+        return h < 0 ? h + 360 : h
     }
 
     /// IEEE 754 half → Float without relying on Float16 (unavailable on x86_64 macOS).

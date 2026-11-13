@@ -140,7 +140,8 @@ final class EDROverlay {
 
     private func tick(token: Int) {
         let progress = min(1, (CACurrentMediaTime() - rampStart) / Self.rampDuration)
-        let eased = 1 - pow(1 - progress, 3) // ease-out cubic
+        let remaining = 1 - progress
+        let eased = 1 - remaining * remaining * remaining // ease-out cubic
         render(gain: rampFrom + (rampTo - rampFrom) * eased)
         if progress >= 1 {
             rampTimer?.cancel()
