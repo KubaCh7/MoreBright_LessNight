@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Xcode version
+        run: xcodebuild -version
+      - name: Build (Release, arm64)
+        run: |
+          set -o pipefail
+          xcodebuild -project MoreBrightLessNight.xcodeproj \
+            -scheme MoreBrightLessNight \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY=- \
+            build 2>&1 | tee build.log | grep -E "error:|warning:|BUILD" || true
+          grep -q "BUILD SUCCEEDED" build.log
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: MoreBrightLessNight.app
+          path: build/Build/Products/Release/MoreBrightLessNight.app

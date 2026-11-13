@@ -1,0 +1,922 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "1600-nit mode (peak)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb 1600 nitów (peak)"
+          }
+        }
+      }
+    },
+    "1600-nit mode is unavailable right now": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb 1600 nitów jest teraz niedostępny"
+          }
+        }
+      }
+    },
+    "Advanced": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaawansowane"
+          }
+        }
+      }
+    },
+    "Allows brightness up to the panel's peak level": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pozwala na jasność do szczytowego poziomu panelu"
+          }
+        }
+      }
+    },
+    "Battery": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bateria"
+          }
+        }
+      }
+    },
+    "Blue": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niebieski"
+          }
+        }
+      }
+    },
+    "Brightness for %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasność: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness for %@"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anuluj"
+          }
+        }
+      }
+    },
+    "Color Test": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test kolorów"
+          }
+        }
+      }
+    },
+    "Color Test…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test kolorów…"
+          }
+        }
+      }
+    },
+    "Critical": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Krytyczny"
+          }
+        }
+      }
+    },
+    "Current EDR headroom": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bieżący zapas EDR"
+          }
+        }
+      }
+    },
+    "Cyan": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cyjan"
+          }
+        }
+      }
+    },
+    "Dark gray": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciemnoszary"
+          }
+        }
+      }
+    },
+    "Dark skin": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ciemna skóra"
+          }
+        }
+      }
+    },
+    "Diagnostics": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostyka"
+          }
+        }
+      }
+    },
+    "Display Brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasność ekranu"
+          }
+        }
+      }
+    },
+    "Displays": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ekrany"
+          }
+        }
+      }
+    },
+    "Expected gain": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oczekiwane wzmocnienie"
+          }
+        }
+      }
+    },
+    "Fair": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podwyższony"
+          }
+        }
+      }
+    },
+    "Full power": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pełna moc"
+          }
+        }
+      }
+    },
+    "Full slider uses peak instead of sustained brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pełny suwak używa jasności szczytowej zamiast utrzymywalnej"
+          }
+        }
+      }
+    },
+    "Gain": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wzmocnienie"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogólne"
+          }
+        }
+      }
+    },
+    "Green": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zielony"
+          }
+        }
+      }
+    },
+    "Highlights clipped: the panel can't show this level right now": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlights clipped: panel nie pokaże teraz tego poziomu"
+          }
+        }
+      }
+    },
+    "Keyboard Shortcut": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skrót klawiszowy"
+          }
+        }
+      }
+    },
+    "Launch at login": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uruchamiaj przy logowaniu"
+          }
+        }
+      }
+    },
+    "Light gray": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasnoszary"
+          }
+        }
+      }
+    },
+    "Light skin": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasna skóra"
+          }
+        }
+      }
+    },
+    "Magenta": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magenta"
+          }
+        }
+      }
+    },
+    "Max ΔE00": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maks. ΔE00"
+          }
+        }
+      }
+    },
+    "Mean ΔE00": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Średnie ΔE00"
+          }
+        }
+      }
+    },
+    "Measure": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zmierz"
+          }
+        }
+      }
+    },
+    "Mid gray": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Średni szary"
+          }
+        }
+      }
+    },
+    "Move the slider above the system maximum first, so there is a boost to measure.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najpierw przesuń suwak powyżej systemowego maksimum, żeby było co zmierzyć."
+          }
+        }
+      }
+    },
+    "No displays found": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie znaleziono ekranów"
+          }
+        }
+      }
+    },
+    "Nominal": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normalny"
+          }
+        }
+      }
+    },
+    "Not available": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niedostępne"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłączony"
+          }
+        }
+      }
+    },
+    "Off: the full slider equals the brightness the panel can sustain (about 1000 nits on MacBook Pro). On: the full slider equals peak brightness (about 1600 nits). Peak mode turns itself off when your Mac gets warm.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłączony: pełny suwak to jasność, którą panel utrzyma (ok. 1000 nitów w MacBooku Pro). Włączony: pełny suwak to jasność szczytowa (ok. 1600 nitów). Tryb szczytowy wyłącza się sam, gdy Mac się nagrzeje."
+          }
+        }
+      }
+    },
+    "Only when connected to power": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tylko po podłączeniu do zasilania"
+          }
+        }
+      }
+    },
+    "Open Color Test…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz test kolorów…"
+          }
+        }
+      }
+    },
+    "Open the test window on an EDR display first.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najpierw umieść okno testu na ekranie z EDR."
+          }
+        }
+      }
+    },
+    "Patch": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Próbka"
+          }
+        }
+      }
+    },
+    "Paused: display asleep": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: ekran uśpiony"
+          }
+        }
+      }
+    },
+    "Paused: low battery": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: niski poziom baterii"
+          }
+        }
+      }
+    },
+    "Paused: on battery power": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: zasilanie z baterii"
+          }
+        }
+      }
+    },
+    "Paused: thermal limit": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: limit termiczny"
+          }
+        }
+      }
+    },
+    "Peak (nits)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Szczytowa (nity)"
+          }
+        }
+      }
+    },
+    "Peak Brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasność szczytowa"
+          }
+        }
+      }
+    },
+    "Peak brightness makes the display and your Mac noticeably warmer, drains the battery faster and may accelerate panel ageing. macOS can lower the brightness on its own at any time to protect the display. Highlights may clip if the panel cannot sustain the requested level.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasność szczytowa wyraźnie nagrzewa ekran i Maca, szybciej rozładowuje baterię i może przyspieszyć zużycie panelu. macOS może w każdej chwili samodzielnie obniżyć jasność, żeby chronić ekran. Jasne tony mogą się przycinać, jeśli panel nie utrzyma żądanego poziomu."
+          }
+        }
+      }
+    },
+    "Potential EDR headroom": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Potencjalny zapas EDR"
+          }
+        }
+      }
+    },
+    "Power adapter": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zasilacz"
+          }
+        }
+      }
+    },
+    "Power source": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Źródło zasilania"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zakończ"
+          }
+        }
+      }
+    },
+    "Red": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czerwony"
+          }
+        }
+      }
+    },
+    "Reference Patches": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Próbki referencyjne"
+          }
+        }
+      }
+    },
+    "Reference color patches": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referencyjne próbki kolorów"
+          }
+        }
+      }
+    },
+    "Requested gain": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Żądane wzmocnienie"
+          }
+        }
+      }
+    },
+    "Restore Defaults": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przywróć domyślne"
+          }
+        }
+      }
+    },
+    "Safety": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bezpieczeństwo"
+          }
+        }
+      }
+    },
+    "ScreenCaptureKit did not return this display. Check Screen Recording permission in System Settings.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ScreenCaptureKit nie zwrócił tego ekranu. Sprawdź uprawnienie Nagrywanie ekranu w Ustawieniach systemowych."
+          }
+        }
+      }
+    },
+    "Serious": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poważny"
+          }
+        }
+      }
+    },
+    "Set the slider above the system maximum, keep this window on that display and click Measure. The boost is turned off briefly for the “before” capture.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustaw suwak powyżej systemowego maksimum, zostaw to okno na tym ekranie i kliknij Zmierz. Podbicie zostanie na chwilę wyłączone na potrzeby zrzutu „przed”."
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia…"
+          }
+        }
+      }
+    },
+    "Shows reference patches and measures the color difference with and without the boost.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokazuje próbki referencyjne i mierzy różnicę kolorów z podbiciem i bez."
+          }
+        }
+      }
+    },
+    "Status": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "Sustained (nits)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utrzymywalna (nity)"
+          }
+        }
+      }
+    },
+    "System brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jasność systemowa"
+          }
+        }
+      }
+    },
+    "System maximum (nits)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maksimum systemowe (nity)"
+          }
+        }
+      }
+    },
+    "The brightness keys keep working normally and the slider follows them.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klawisze jasności działają normalnie, a suwak za nimi podąża."
+          }
+        }
+      }
+    },
+    "The capture did not include the boost (ScreenCaptureKit returned SDR values). The ΔE result below is not meaningful on this macOS version.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrzut nie zawierał podbicia (ScreenCaptureKit zwrócił wartości SDR). Poniższy wynik ΔE nie ma sensu w tej wersji macOS."
+          }
+        }
+      }
+    },
+    "The capture returned no image.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrzut nie zwrócił obrazu."
+          }
+        }
+      }
+    },
+    "The extra brightness turns off automatically when the thermal state is serious, when the battery is under 20 percent and while the display sleeps.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodatkowa jasność wyłącza się automatycznie przy poważnym stanie termicznym, gdy bateria spadnie poniżej 20 procent i gdy ekran jest uśpiony."
+          }
+        }
+      }
+    },
+    "Thermal state": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stan termiczny"
+          }
+        }
+      }
+    },
+    "Thermally limited": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ograniczone termicznie"
+          }
+        }
+      }
+    },
+    "This display has no EDR headroom, so brightness can't go above the system maximum.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten ekran nie ma zapasu EDR, więc jasność nie przekroczy systemowego maksimum."
+          }
+        }
+      }
+    },
+    "Toggle full brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przełącz pełną jasność"
+          }
+        }
+      }
+    },
+    "Turn On": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włącz"
+          }
+        }
+      }
+    },
+    "Turn on 1600-nit mode?": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Włączyć tryb 1600 nitów?"
+          }
+        }
+      }
+    },
+    "Turned off automatically because your Mac got warm": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłączony automatycznie, bo Mac się nagrzał"
+          }
+        }
+      }
+    },
+    "Unknown": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nieznany"
+          }
+        }
+      }
+    },
+    "Unsupported display": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niewspierany ekran"
+          }
+        }
+      }
+    },
+    "Used to place the slider's knee and cap the boost. The real output is always limited by the headroom macOS reports.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Służy do wyznaczenia punktu przejścia na suwaku i limitu podbicia. Realna jasność zawsze jest ograniczona zapasem zgłaszanym przez macOS."
+          }
+        }
+      }
+    },
+    "White": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Biały"
+          }
+        }
+      }
+    },
+    "Yellow": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Żółty"
+          }
+        }
+      }
+    },
+    "Your Mac is warm. Peak mode can be turned on again once the thermal state returns to normal.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac jest nagrzany. Tryb szczytowy można włączyć ponownie, gdy stan termiczny wróci do normy."
+          }
+        }
+      }
+    },
+    "clipped": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "przycięte"
+          }
+        }
+      }
+    },
+    "ΔE00": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ΔE00"
+          }
+        }
+      }
+    },
+    "ΔE00 is computed after normalising luminance, so it measures only hue and chroma shift. Below 1 is invisible, below 2 is hard to notice.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ΔE00 liczone po wyrównaniu luminancji, więc mierzy tylko przesunięcie odcienia i nasycenia. Poniżej 1 niewidoczne, poniżej 2 trudno zauważalne."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
