@@ -1,3 +1,11 @@
+<p align="center">
+  <a href="https://github.com/KubaCh7/MoreBright_LessNight/releases/latest/download/MoreBrightLessNight.dmg">
+    <img alt="Pobierz na macOS (DMG)" src="https://img.shields.io/badge/Pobierz_na_macOS-DMG-0071e3?style=for-the-badge&logo=apple&logoColor=white" height="44">
+  </a>
+  <br>
+  <sub>macOS 14+ · Apple Silicon · <a href="https://github.com/KubaCh7/MoreBright_LessNight/releases/latest">informacje o wersji</a></sub>
+</p>
+
 # MoreBrightLessNight
 
 Aplikacja menu bar na macOS 14+ (Apple Silicon), która podnosi jasność SDR ponad systemowe maksimum (ok. 500 nitów) do jasności utrzymywalnej panelu XDR (ok. 1000 nitów), opcjonalnie do szczytowej (1600 nitów).
@@ -60,7 +68,7 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-Workflow `.github/workflows/release.yml` zbuduje aplikację z `MARKETING_VERSION` wziętym z tagu, zrobi `MoreBrightLessNight-0.2.0.dmg` i `.dmg.sha256` i opublikuje GitHub Release. Można też uruchomić go ręcznie (Actions → Release → Run workflow).
+Workflow `.github/workflows/release.yml` zbuduje aplikację z `MARKETING_VERSION` wziętym z tagu, zrobi `MoreBrightLessNight.dmg` i `MoreBrightLessNight.dmg.sha256` (stała nazwa, więc przycisk na górze README zawsze wskazuje najnowszą wersję) i opublikuje GitHub Release. Można też uruchomić go ręcznie (Actions → Release → Run workflow).
 
 ## Budowanie
 

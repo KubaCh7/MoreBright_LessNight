@@ -26,7 +26,7 @@ jobs:
           if [ -n "$INPUT_VERSION" ]; then V="$INPUT_VERSION"; else V="${GITHUB_REF_NAME#v}"; fi
           if ! echo "$V" | grep -Eq '^[0-9]+(\.[0-9]+){1,2}$'; then echo "Bad version: $V"; exit 1; fi
           echo "VERSION=$V" >> "$GITHUB_ENV"
-          echo "DMG=MoreBrightLessNight-$V.dmg" >> "$GITHUB_ENV"
+          echo "DMG=MoreBrightLessNight.dmg" >> "$GITHUB_ENV"
 
       - name: Build
         run: |
