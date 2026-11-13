@@ -14,7 +14,8 @@ Aplikacja menu bar na macOS 14+ (Apple Silicon), która podnosi jasność SDR po
 
 - Dla każdego ekranu z `maximumPotentialExtendedDynamicRangeColorComponentValue > 1` powstaje pełnoekranowe, przezroczyste okno (`OverlayWindow`) na poziomie `CGShieldingWindowLevel`, click-through, bez fokusu, poza Mission Control i Cmd+Tab, wykluczone z nagrywania ekranu.
 - W oknie siedzi `CAMetalLayer` (`rgba16Float`, extended linear sRGB, `wantsExtendedDynamicRangeContent`) wypełniony jedną wartością `m > 1.0`, z `compositingFilter = "multiply"`. WindowServer liczy `piksel × m` osobno dla R, G i B. To czyste liniowe wzmocnienie: bez gammy, bez zmiany white pointa, bez tintu. True Tone, Night Shift i profil ICC zostają nietknięte.
-- Rysowanie odbywa się tylko podczas rampy 200 ms (ease-out, osobna kolejka, nie main thread). Potem warstwa jest statyczna. Przy `m = 1` okno znika całkiem, więc EDR się wyłącza.
+- **macOS daje zapas EDR tylko warstwie, która ciągle prezentuje klatki.** Statyczna warstwa traci headroom w około sekundę i boost spada do 1×. Dlatego podczas boostu overlay prezentuje klatkę 1×1 (sam clear) 5 razy na sekundę, na osobnej kolejce, nigdy na main thread. Tak samo robi BrightIntosh, a BetterDisplay nazywa to „continuous EDR enforcement”. Zmiany idą rampą 200 ms (ease-out). Przy `m = 1` okno znika, a pętla staje.
+- Wzmocnienie = `min(żądanie, bieżący headroom)`. macOS podnosi headroom stopniowo, więc aplikacja przez pierwsze 30 s czyta go z częstotliwością 10 Hz, potem 2 Hz, i płynnie za nim podąża. Dopóki headroom < 1,05, renderuje 1,12×, żeby „obudzić” EDR. Gdy po wybudzeniu macOS uparcie zgłasza 1,0, używa wartości potencjalnej.
 
 ### Suwak
 
@@ -30,11 +31,12 @@ Aplikacja menu bar na macOS 14+ (Apple Silicon), która podnosi jasność SDR po
 - Brak własnego HUD/OSD/toastu. Jedyny UI to popover i okno Ustawień.
 - Brak `CGEventTap`, `IOHIDManager` i jakiejkolwiek obsługi F1/F2/F10-F12 i klawiszy multimedialnych. Skrót globalny to Carbon `RegisterEventHotKey`, który dostaje wyłącznie własną kombinację (domyślnie ⌃⌥⌘B).
 - Zero CoreAudio i zero głośności.
-- Jasność czytana pasywnie: callback `DisplayServicesRegisterForBrightnessChangeNotifications` plus odczyt kontrolny 1 Hz (0,5 Hz → 2 Hz tylko gdy callback jest niedostępny). Nigdy nie ma zapisu zwrotnego. Gdy ktoś inny obniży jasność (F1, Centrum sterowania, auto-jasność), boost spada do 1× i suwak podąża za systemem.
+- Jasność czytana pasywnie: callback `DisplayServicesRegisterForBrightnessChangeNotifications` plus odczyt kontrolny 1 Hz (2 Hz tylko, gdy callback jest niedostępny). Nigdy nie ma zapisu zwrotnego. Wyraźny krok w dół (np. F1, 1/16) wyłącza boost i suwak podąża za systemem.
+- Auto-jasność (czujnik światła) jest na czas boostu wstrzymywana i potem przywracana, tak jak w BetterDisplay i Lunar. Można to wyłączyć w Ustawieniach. Jeśli aplikacja padnie w trakcie boostu, auto-jasność zostanie przywrócona przy następnym uruchomieniu.
 
 ### Bezpieczeństwo
 
-- Overlay wyłącza się przy `thermalState >= .serious`, na baterii poniżej 20%, przy uśpieniu ekranu/systemu oraz (opcjonalnie) na baterii w ogóle.
+- Overlay wyłącza się przy `thermalState >= .serious`, na baterii poniżej 20%, przy uśpieniu ekranu lub systemu, blokadzie ekranu, wygaszaczu, przełączeniu użytkownika i podłączeniu lub odłączeniu ekranu, oraz (opcjonalnie) na baterii w ogóle. Po ustąpieniu przyczyny wraca po 5 s, żeby macOS zdążył odbudować EDR.
 - Tryb 1600 wyłącza się sam (trwale) od `.fair` w górę. Pierwsze włączenie wymaga potwierdzenia w dialogu.
 - Overlay to zwykłe okno procesu. Crash albo kill = okno znika. Aplikacja nie zmienia na stałe niczego poza zwykłą jasnością systemu, którą ustawia użytkownik.
 
@@ -70,6 +72,14 @@ git push origin v0.2.0
 
 Workflow `.github/workflows/release.yml` zbuduje aplikację z `MARKETING_VERSION` wziętym z tagu, zrobi `MoreBrightLessNight.dmg` i `MoreBrightLessNight.dmg.sha256` (stała nazwa, więc przycisk na górze README zawsze wskazuje najnowszą wersję) i opublikuje GitHub Release. Można też uruchomić go ręcznie (Actions → Release → Run workflow).
 
+## Diagnostyka
+
+Ustawienia → Ekrany pokazują bieżący headroom, żądane i zastosowane wzmocnienie oraz wiek ostatniej klatki overlayu (powinien być < 300 ms). Logi:
+
+```bash
+log stream --predicate 'subsystem == "app.morebrightlessnight"' --level debug
+```
+
 ## Budowanie
 
 Wymagania: macOS 14+, Xcode 16+ (projekt używa folderów synchronizowanych, `objectVersion 77`), Apple Silicon. Brak zewnętrznych zależności.
@@ -103,9 +113,9 @@ CI (`.github/workflows/build.yml`) buduje projekt na `macos-15` przy każdym pus
 3. **Nity to model, nie pomiar.** 500/1000/1600 to domyślny profil MacBooka Pro XDR (edytowalny w Zaawansowanych). Realną jasność decyduje macOS i ABL panelu: przy dużej powierzchni bieli 1600 nitów pełnoekranowo nie wystąpi, system przytnie do ok. 1000. Wtedy aplikacja pokaże „highlights clipped”, bo czyta bieżący headroom.
 4. **Headroom rośnie z opóźnieniem.** macOS podnosi `maximumExtendedDynamicRangeColorComponentValue` dopiero po pojawieniu się treści EDR (do kilku sekund). Ostrzeżenie o clippingu pojawia się po 1,5 s stabilizacji i może chwilę mrugnąć na starcie.
 5. **F1 w trybie boost to duży krok.** Nie wolno nam zapisywać jasności zwrotnie, więc F1 przy 1000 nitach daje systemowe ~94% i jednocześnie wyłącza boost. F2 przy maksimum systemu nic nie robi (system nie wysyła zmiany), więc boost podnosi się tylko suwakiem lub skrótem.
-6. **Auto-jasność** obniżająca jasność wyłączy boost (zgodnie z zasadą „nie walcz z systemem”). Dla stabilnego boostu wyłącz „Automatycznie dostosowuj jasność”.
+6. **Auto-jasność jest wstrzymywana na czas boostu.** To jedyna trwała zmiana ustawień systemu, jaką robi aplikacja. Jest cofana przy wyjściu z boostu, przy zamknięciu aplikacji i (po crashu) przy następnym starcie. Jeśli aplikację odinstalujesz w trakcie boostu, włącz auto-jasność ręcznie.
 7. **Ruch suwakiem poniżej knee zmienia jasność systemu**, więc Vorsaint może pokazać własną animację jasności. To jego reakcja na prawdziwą zmianę, nie nasz HUD.
-8. **Koszt energii.** Statyczny overlay nie renderuje klatek, ale WindowServer wciąż komponuje multiply na całym ekranie, a panel świeci mocniej. Bateria schodzi wyraźnie szybciej.
+8. **Koszt energii.** Overlay prezentuje 5 klatek/s (1×1 piksel, pomijalne dla GPU), WindowServer komponuje multiply na całym ekranie, a panel świeci mocniej. Bateria schodzi wyraźnie szybciej.
 9. **Test ΔE zależy od ScreenCaptureKit.** Na macOS 14 SCK zwykle zwraca SDR (wartości przycięte do 1.0), więc pomiar nie zobaczy boostu i UI to jawnie zgłosi. Na macOS 15+ używany jest `captureDynamicRange = .hdrLocalDisplay`. ΔE liczone jest przy założeniu prymarów sRGB w zrzucie. Jeśli system odda linear P3, wartości ΔE będą lekko przesunięte, ale „0 = brak przesunięcia” nadal obowiązuje.
 10. **Ekrany zewnętrzne.** Ekrany bez EDR są oznaczone jako niewspierane. Zewnętrzne ekrany z EDR, które nie obsługują `DisplayServices`, mają suwak sterujący wyłącznie overlayem (0% = jasność systemu).
 11. **Suwak w stylu Centrum sterowania jest własnym widokiem**, bo natywny `Slider` nie ma tego wyglądu. Dla VoiceOver i klawiatury ma `accessibilityRepresentation` w postaci standardowego `Slider` oraz obsługę strzałek.

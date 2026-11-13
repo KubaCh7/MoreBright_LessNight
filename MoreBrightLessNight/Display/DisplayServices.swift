@@ -4,14 +4,19 @@ import Foundation
 /// Thin bridge to the private DisplayServices framework, loaded at runtime with dlopen.
 ///
 /// Rules this file enforces (see README, "Zero interference"):
-/// - Writes happen only through `setBrightness`, which is called only from a user slider action.
-/// - Reads are passive: a change callback plus a ≤ 1 Hz safety read. Nothing here ever writes back.
+/// - Brightness is written only through `setBrightness`, called only from a user action.
+/// - Reads are passive: a change callback plus a ≤ 1 Hz safety read. Nothing here writes back.
+/// - Auto-brightness may be paused while boosting and is always restored afterwards
+///   (same approach as BetterDisplay and Lunar). Signatures match Lunar's bridging header.
 enum DisplayServices {
     fileprivate typealias GetBrightnessFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
     fileprivate typealias SetBrightnessFn = @convention(c) (CGDirectDisplayID, Float) -> Int32
     fileprivate typealias CanChangeFn = @convention(c) (CGDirectDisplayID) -> Bool
     fileprivate typealias RegisterFn = @convention(c) (CGDirectDisplayID, UnsafeMutableRawPointer?, CFNotificationCallback) -> Int32
     fileprivate typealias UnregisterFn = @convention(c) (CGDirectDisplayID, UnsafeMutableRawPointer?) -> Int32
+    fileprivate typealias HasALCFn = @convention(c) (CGDirectDisplayID) -> Bool
+    fileprivate typealias GetALCFn = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Bool>) -> Int32
+    fileprivate typealias SetALCFn = @convention(c) (CGDirectDisplayID, Bool) -> Int32
 
     private static let handle: UnsafeMutableRawPointer? = dlopen(
         "/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY
@@ -27,6 +32,9 @@ enum DisplayServices {
     private static let canChangeFn = symbol("DisplayServicesCanChangeBrightness", as: CanChangeFn.self)
     fileprivate static let registerFn = symbol("DisplayServicesRegisterForBrightnessChangeNotifications", as: RegisterFn.self)
     fileprivate static let unregisterFn = symbol("DisplayServicesUnregisterForBrightnessChangeNotifications", as: UnregisterFn.self)
+    private static let hasALCFn = symbol("DisplayServicesHasAmbientLightCompensation", as: HasALCFn.self)
+    private static let getALCFn = symbol("DisplayServicesAmbientLightCompensationEnabled", as: GetALCFn.self)
+    private static let setALCFn = symbol("DisplayServicesEnableAmbientLightCompensation", as: SetALCFn.self)
 
     static func brightness(_ display: CGDirectDisplayID) -> Double? {
         guard let getFn else { return nil }
@@ -43,6 +51,18 @@ enum DisplayServices {
     /// Only call this in response to the user moving our slider (or the user's own hotkey).
     static func setBrightness(_ display: CGDirectDisplayID, _ value: Double) {
         _ = setFn?(display, Float(min(max(value, 0), 1)))
+    }
+
+    /// "Automatically adjust brightness" state, or nil if the display has no sensor / API.
+    static func autoBrightnessEnabled(_ display: CGDirectDisplayID) -> Bool? {
+        guard let getALCFn, setALCFn != nil, hasALCFn?(display) ?? true else { return nil }
+        var enabled = false
+        guard getALCFn(display, &enabled) == 0 else { return nil }
+        return enabled
+    }
+
+    static func setAutoBrightness(_ display: CGDirectDisplayID, enabled: Bool) {
+        _ = setALCFn?(display, enabled)
     }
 }
 
@@ -95,11 +115,6 @@ final class BrightnessObservation {
         timer.tolerance = interval * 0.5
         RunLoop.main.add(timer, forMode: .common)
         safetyTimer = timer
-    }
-
-    /// Updates the dedup baseline after our own write so the echo is not reported as external.
-    func noteOwnWrite(_ value: Double) {
-        lastValue = value
     }
 
     func invalidate() {

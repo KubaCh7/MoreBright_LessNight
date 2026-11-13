@@ -10,7 +10,7 @@ final class AppModel: ObservableObject {
         static let peakAcknowledged = "peakWarningAcknowledged"
         static let onlyOnAC = "onlyOnACPower"
         static let hotKey = "hotKeyChoice"
-        static let holdFullBrightness = "holdFullBrightness"
+        static let pauseAutoBrightness = "pauseAutoBrightness"
     }
 
     @Published private(set) var screens: [ScreenController] = []
@@ -26,10 +26,14 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// While boosting, small external drops of system brightness are reverted to 100 %.
-    /// A deliberate step down (F1) still turns the boost off.
-    @Published var holdFullBrightness: Bool {
-        didSet { defaults.set(holdFullBrightness, forKey: Keys.holdFullBrightness) }
+    /// While boosting, macOS auto-brightness is paused (it would pull brightness down under
+    /// the boost) and restored afterwards, like BetterDisplay and Lunar do.
+    @Published var pauseAutoBrightness: Bool {
+        didSet {
+            defaults.set(pauseAutoBrightness, forKey: Keys.pauseAutoBrightness)
+            if !pauseAutoBrightness { screens.forEach { $0.restoreAutoBrightness() } }
+            screens.forEach { $0.applyOverlay(animated: true) }
+        }
     }
 
     @Published var hotKeyChoice: HotKeyChoice {
@@ -54,7 +58,7 @@ final class AppModel: ObservableObject {
         let defaults = UserDefaults.standard
         peakModeEnabled = defaults.bool(forKey: Keys.peakMode)
         onlyOnACPower = defaults.bool(forKey: Keys.onlyOnAC)
-        holdFullBrightness = defaults.object(forKey: Keys.holdFullBrightness) as? Bool ?? true
+        pauseAutoBrightness = defaults.object(forKey: Keys.pauseAutoBrightness) as? Bool ?? true
         hotKeyChoice = HotKeyChoice(rawValue: defaults.string(forKey: Keys.hotKey) ?? "") ?? .controlOptionCommandB
 
         power.onChange = { [weak self] in self?.reevaluate() }
@@ -67,6 +71,12 @@ final class AppModel: ObservableObject {
             .publisher(for: NSApplication.didChangeScreenParametersNotification)
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.rebuildScreens() }
+            .store(in: &cancellables)
+
+        // Never leave auto-brightness switched off behind us.
+        NotificationCenter.default
+            .publisher(for: NSApplication.willTerminateNotification)
+            .sink { [weak self] _ in self?.screens.forEach { $0.tearDown() } }
             .store(in: &cancellables)
 
         hotKey = GlobalHotKey { [weak self] in self?.toggleFullBrightness() }
@@ -163,7 +173,7 @@ final class AppModel: ObservableObject {
             for screen in supported { screen.setPosition(snapshot[screen.key] ?? screen.knee) }
             fullBrightnessSnapshot = nil
         } else {
-            fullBrightnessSnapshot = Dictionary(uniqueKeysWithValues: supported.map { ($0.key, $0.position) })
+            fullBrightnessSnapshot = Dictionary(supported.map { ($0.key, $0.position) }, uniquingKeysWith: { first, _ in first })
             supported.forEach { $0.setPosition(1) }
         }
     }
@@ -181,7 +191,7 @@ final class AppModel: ObservableObject {
         let reason: PauseReason?
         if thermal >= ProcessInfo.ThermalState.serious.rawValue {
             reason = .thermal
-        } else if power.screensAsleep {
+        } else if power.isSuspended {
             reason = .screensAsleep
         } else if !power.isOnACPower, let battery = power.batteryPercent, battery < 20 {
             reason = .lowBattery
@@ -214,6 +224,9 @@ final class AppModel: ObservableObject {
         for old in screens where !result.contains(where: { $0 === old }) {
             old.tearDown()
         }
+        // didChangeScreenParameters also fires on every headroom change and in fullscreen
+        // apps; when the set of displays is the same, nothing else needs to change.
+        guard result.map(\.displayID) != screens.map(\.displayID) else { return }
         screens = result
         screenCancellables = result.map { screen in
             screen.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }

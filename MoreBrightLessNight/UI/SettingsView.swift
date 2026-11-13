@@ -32,9 +32,9 @@ struct GeneralSettingsView: View {
             }
 
             Section {
-                Toggle("Hold full brightness while boosting", isOn: $model.holdFullBrightness)
+                Toggle("Pause auto-brightness while boosting", isOn: $model.pauseAutoBrightness)
             } footer: {
-                Text("Keeps system brightness at maximum while the boost is on, so auto-brightness can't pull it down. Pressing the brightness-down key still turns the boost off.")
+                Text("Turns off “Automatically adjust brightness” while the boost is on, so the light sensor can't pull brightness down, and turns it back on afterwards. Pressing the brightness-down key still turns the boost off.")
                     .foregroundStyle(.secondary)
             }
 
@@ -170,7 +170,19 @@ private struct DisplaySettingsSection: View {
                 Text(verbatim: String(format: "%.2f×", screen.currentHeadroom)).monospacedDigit()
             }
             LabeledContent("Requested gain") {
-                Text(verbatim: String(format: "%.2f×", screen.effectiveGain)).monospacedDigit()
+                Text(verbatim: String(format: "%.2f×", screen.requestedGain)).monospacedDigit()
+            }
+            LabeledContent("Applied gain") {
+                Text(verbatim: String(format: "%.2f×", screen.appliedGain)).monospacedDigit()
+            }
+            LabeledContent("Overlay") {
+                TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+                    if screen.overlayIsPresenting, let age = screen.secondsSinceLastFrame {
+                        Text(verbatim: String(format: "%.0f ms", age * 1000)).monospacedDigit()
+                    } else {
+                        Text("Stopped")
+                    }
+                }
             }
             LabeledContent("System brightness") {
                 if let brightness = screen.systemBrightness {

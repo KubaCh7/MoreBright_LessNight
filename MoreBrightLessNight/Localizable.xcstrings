@@ -41,6 +41,16 @@
         }
       }
     },
+    "Applied gain": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zastosowane wzmocnienie"
+          }
+        }
+      }
+    },
     "Battery": {
       "localizations": {
         "pl": {
@@ -327,16 +337,6 @@
         }
       }
     },
-    "Hold full brightness while boosting": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Utrzymuj pełną jasność podczas podbicia"
-          }
-        }
-      }
-    },
     "Install": {
       "localizations": {
         "pl": {
@@ -363,16 +363,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Instalowanie aktualizacji…"
-          }
-        }
-      }
-    },
-    "Keeps system brightness at maximum while the boost is on, so auto-brightness can't pull it down. Pressing the brightness-down key still turns the boost off.": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trzyma jasność systemową na maksimum, gdy podbicie jest włączone, żeby auto-jasność jej nie obniżała. Klawisz zmniejszania jasności nadal wyłącza podbicie."
           }
         }
       }
@@ -603,6 +593,16 @@
         }
       }
     },
+    "Overlay": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nakładka"
+          }
+        }
+      }
+    },
     "Patch": {
       "localizations": {
         "pl": {
@@ -613,12 +613,22 @@
         }
       }
     },
-    "Paused: display asleep": {
+    "Pause auto-brightness while boosting": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wstrzymane: ekran uśpiony"
+            "value": "Wstrzymuj auto-jasność podczas podbicia"
+          }
+        }
+      }
+    },
+    "Paused: display asleep or locked": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wstrzymane: ekran uśpiony lub zablokowany"
           }
         }
       }
@@ -853,6 +863,16 @@
         }
       }
     },
+    "Stopped": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zatrzymana"
+          }
+        }
+      }
+    },
     "Sustained (nits)": {
       "localizations": {
         "pl": {
@@ -1039,6 +1059,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wyłączony automatycznie, bo Mac się nagrzał"
+          }
+        }
+      }
+    },
+    "Turns off “Automatically adjust brightness” while the boost is on, so the light sensor can't pull brightness down, and turns it back on afterwards. Pressing the brightness-down key still turns the boost off.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wyłącza „Automatycznie dostosowuj jasność”, gdy podbicie jest włączone, żeby czujnik światła nie obniżał jasności, i włącza ją z powrotem po wszystkim. Klawisz zmniejszania jasności nadal wyłącza podbicie."
           }
         }
       }

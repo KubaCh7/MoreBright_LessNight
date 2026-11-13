@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import os
 
 enum PauseReason: Equatable {
     case thermal, screensAsleep, lowBattery, onBattery
@@ -7,7 +8,7 @@ enum PauseReason: Equatable {
     var title: String {
         switch self {
         case .thermal: return String(localized: "Paused: thermal limit")
-        case .screensAsleep: return String(localized: "Paused: display asleep")
+        case .screensAsleep: return String(localized: "Paused: display asleep or locked")
         case .lowBattery: return String(localized: "Paused: low battery")
         case .onBattery: return String(localized: "Paused: on battery power")
         }
@@ -52,6 +53,10 @@ enum ScreenStatus: Equatable {
 ///   p <= knee: system brightness = p / knee, gain = 1
 ///   p >  knee: system brightness = 1,        gain = p / knee  (linear in nits up to top)
 /// Both sides meet at p == knee with brightness 1 and gain 1, so there is no jump.
+///
+/// `boostGain` is only ever the user's request. Everything else (mode, headroom, pause
+/// reasons) is applied as a cap when computing `effectiveGain`, never written back, so a
+/// momentary bad reading can't permanently reset the boost.
 final class ScreenController: ObservableObject, Identifiable {
     let displayID: CGDirectDisplayID
     let key: String
@@ -62,6 +67,7 @@ final class ScreenController: ObservableObject, Identifiable {
     @Published private(set) var currentHeadroom: Double
     @Published private(set) var systemBrightness: Double?
     @Published private(set) var boostGain: Double
+    @Published private(set) var appliedGain: Double = 1
     @Published private(set) var highlightsClipped = false
     @Published private(set) var profile: NitsProfile
 
@@ -78,13 +84,17 @@ final class ScreenController: ObservableObject, Identifiable {
     private let canWriteBrightness: Bool
     private var pendingBrightness: Double?
     private var pendingWrite: DispatchWorkItem?
+    /// Last value macOS actually reported (never optimistic).
+    private var lastObservedBrightness: Double?
     /// Value we last asked macOS for. macOS animates brightness changes, so for a moment it
     /// reports intermediate values; those are our own echo, not the user pressing F1.
     private var ownTarget: Double?
     private var ownTargetDeadline: Date = .distantPast
-    private var lastHoldWrite: Date = .distantPast
+    private var boostRequestedSince: Date?
+    private var fastPollUntil: Date = .distantPast
     private var headroomTimer: Timer?
-    private var overlayActiveSince: Date?
+    private var headroomTimerInterval: TimeInterval = 0
+    private var autoBrightnessPaused = false
     private let defaults = UserDefaults.standard
 
     init(screen: NSScreen, displayID: CGDirectDisplayID, model: AppModel) {
@@ -106,11 +116,17 @@ final class ScreenController: ObservableObject, Identifiable {
         }
         let savedGain = UserDefaults.standard.double(forKey: "boost.\(key)")
         boostGain = savedGain >= 1 ? savedGain : 1
+        lastObservedBrightness = systemBrightness
+
+        // If we crashed while auto-brightness was paused, give it back now.
+        if UserDefaults.standard.bool(forKey: Self.autoBrightnessKey(key)) {
+            DisplayServices.setAutoBrightness(displayID, enabled: true)
+            UserDefaults.standard.removeObject(forKey: Self.autoBrightnessKey(key))
+        }
 
         observation = BrightnessObservation(display: displayID) { [weak self] value in
             self?.handleBrightnessChange(value)
         }
-        clampBoostToMode()
     }
 
     deinit { tearDown() }
@@ -119,18 +135,21 @@ final class ScreenController: ObservableObject, Identifiable {
         observation?.invalidate()
         observation = nil
         pendingWrite?.cancel()
-        headroomTimer?.invalidate()
-        headroomTimer = nil
+        pendingWrite = nil
+        stopHeadroomMonitor()
+        restoreAutoBrightness()
         overlay?.tearDown()
         overlay = nil
     }
+
+    private static func autoBrightnessKey(_ key: String) -> String { "autoBrightnessPaused.\(key)" }
 
     // MARK: Derived state
 
     var supportsEDR: Bool { potentialHeadroom > 1.0 }
     var controlsSystemBrightness: Bool { canWriteBrightness && systemBrightness != nil }
 
-    /// Highest gain the slider can reach in the current mode, never above real headroom.
+    /// Highest gain the slider can reach in the current mode, never above potential headroom.
     var maxGain: Double {
         guard supportsEDR else { return 1 }
         let peak = model?.peakModeEnabled ?? false
@@ -151,20 +170,31 @@ final class ScreenController: ObservableObject, Identifiable {
             return (systemBrightness ?? 1) * knee
         }
         guard top > 1 else { return 0 }
-        return (boostGain - 1) / (top - 1)
+        return min(1, (boostGain - 1) / (top - 1))
     }
 
-    /// What the overlay is actually asked to do right now.
+    /// What the user asked for, capped by mode and pause reasons (not by live headroom).
+    var requestedGain: Double {
+        guard supportsEDR, model?.pauseReason == nil else { return 1 }
+        if controlsSystemBrightness, (lastObservedBrightness ?? 1) < 0.9 { return 1 }
+        return min(boostGain, maxGain)
+    }
+
+    /// What the overlay is asked to render right now.
     var effectiveGain: Double {
         if let overrideGain { return overrideGain }
-        return requestedGain
+        let requested = requestedGain
+        guard requested > 1.0001 else { return 1 }
+        return min(requested, availableHeadroom)
     }
 
-    private var requestedGain: Double {
-        guard supportsEDR, model?.pauseReason == nil else { return 1 }
-        // Small drift below 100 % (auto-brightness, rounding) must not kill the boost.
-        if controlsSystemBrightness, (systemBrightness ?? 1) < 0.9 { return 1 }
-        return min(boostGain, maxGain)
+    /// Headroom macOS grants right now. EDR engages lazily: until it does, a small wake-up
+    /// gain asks for it (BrightIntosh uses 1.12). After sleep/wake macOS can report a bogus
+    /// 1.0 for a long time; then fall back to the potential value (BetterDisplay #4918).
+    private var availableHeadroom: Double {
+        if currentHeadroom >= 1.05 { return currentHeadroom }
+        if let since = boostRequestedSince, Date().timeIntervalSince(since) > 5 { return potentialHeadroom }
+        return 1.12
     }
 
     var status: ScreenStatus {
@@ -178,6 +208,11 @@ final class ScreenController: ObservableObject, Identifiable {
         }
         return .fullPower
     }
+
+    // MARK: Diagnostics
+
+    var overlayIsPresenting: Bool { overlay?.isPresenting ?? false }
+    var secondsSinceLastFrame: Double? { overlay?.secondsSinceLastFrame }
 
     // MARK: User actions
 
@@ -200,7 +235,6 @@ final class ScreenController: ObservableObject, Identifiable {
         if let data = try? JSONEncoder().encode(profile) {
             defaults.set(data, forKey: "profile.\(key)")
         }
-        clampBoostToMode()
         applyOverlay(animated: true)
     }
 
@@ -212,43 +246,67 @@ final class ScreenController: ObservableObject, Identifiable {
 
     func update(screen: NSScreen) {
         self.screen = screen
-        name = screen.localizedName
-        refreshHeadroom()
+        if name != screen.localizedName { name = screen.localizedName }
+        if boostRequestedSince != nil { fastPollUntil = Date().addingTimeInterval(30) }
         overlay?.updateFrame(for: screen)
-        clampBoostToMode()
+        refreshHeadroom()
         applyOverlay(animated: true)
     }
 
     /// Peak mode toggled. The stored gain (i.e. nits) is kept; only the percentages move.
     func modeDidChange() {
-        clampBoostToMode()
         objectWillChange.send()
         applyOverlay(animated: true)
     }
 
     func applyOverlay(animated: Bool) {
+        let boosting = requestedGain > 1.0001 || (overrideGain ?? 1) > 1.0001
+        if boosting {
+            if boostRequestedSince == nil {
+                boostRequestedSince = Date()
+                fastPollUntil = Date().addingTimeInterval(30)
+            }
+            pauseAutoBrightnessIfNeeded()
+            startHeadroomMonitor()
+        } else {
+            boostRequestedSince = nil
+            stopHeadroomMonitor()
+            restoreAutoBrightness()
+            if highlightsClipped { highlightsClipped = false }
+        }
+
         let gain = effectiveGain
         if gain > 1.0001 {
             if overlay == nil { overlay = EDROverlay(screen: screen) }
             overlay?.setGain(gain, animated: animated)
-            if overlayActiveSince == nil { overlayActiveSince = Date() }
-            startHeadroomMonitor()
         } else {
             overlay?.setGain(1, animated: animated)
-            overlayActiveSince = nil
-            stopHeadroomMonitor()
-            if highlightsClipped { highlightsClipped = false }
         }
+        if abs(gain - appliedGain) > 0.005 {
+            overlayLog.info("display \(self.displayID) gain \(self.appliedGain, format: .fixed(precision: 2)) -> \(gain, format: .fixed(precision: 2)) (requested \(self.requestedGain, format: .fixed(precision: 2)), headroom \(self.currentHeadroom, format: .fixed(precision: 2)))")
+            appliedGain = gain
+        }
+    }
+
+    /// Setting toggled off, or app quitting.
+    func restoreAutoBrightness() {
+        guard autoBrightnessPaused else { return }
+        DisplayServices.setAutoBrightness(displayID, enabled: true)
+        autoBrightnessPaused = false
+        defaults.removeObject(forKey: Self.autoBrightnessKey(key))
+        overlayLog.info("display \(self.displayID) auto-brightness restored")
     }
 
     // MARK: Private
 
-    private func clampBoostToMode() {
-        let clamped = min(max(boostGain, 1), maxGain)
-        if clamped != boostGain {
-            boostGain = clamped
-            defaults.set(boostGain, forKey: "boost.\(key)")
-        }
+    /// Auto-brightness pulls brightness down under a boost; BetterDisplay and Lunar pause it.
+    private func pauseAutoBrightnessIfNeeded() {
+        guard !autoBrightnessPaused, model?.pauseAutoBrightness ?? false,
+              DisplayServices.autoBrightnessEnabled(displayID) == true else { return }
+        DisplayServices.setAutoBrightness(displayID, enabled: false)
+        autoBrightnessPaused = true
+        defaults.set(true, forKey: Self.autoBrightnessKey(key))
+        overlayLog.info("display \(self.displayID) auto-brightness paused")
     }
 
     /// Coalesced to ≤ 30 writes/s while dragging. Only ever called from a user action.
@@ -264,7 +322,6 @@ final class ScreenController: ObservableObject, Identifiable {
             self.pendingWrite = nil
             self.pendingBrightness = nil
             DisplayServices.setBrightness(self.displayID, value)
-            self.observation?.noteOwnWrite(value)
             self.expectOwnBrightness(value)
         }
         pendingWrite = work
@@ -276,9 +333,13 @@ final class ScreenController: ObservableObject, Identifiable {
         ownTargetDeadline = Date().addingTimeInterval(3)
     }
 
-    /// Someone else changed brightness (F1/F2, Control Center, auto-brightness...).
+    /// Someone (or our own animated write) changed brightness. We follow, never write back.
     private func handleBrightnessChange(_ value: Double) {
-        // Our own write still in flight or still animating: ignore intermediate values.
+        let previous = lastObservedBrightness ?? value
+        lastObservedBrightness = value
+        defer { applyOverlay(animated: true) }
+
+        // Our own write still in flight or still animating: not user input.
         if pendingWrite != nil { return }
         if let target = ownTarget {
             let reached = abs(value - target) <= 0.01
@@ -290,57 +351,50 @@ final class ScreenController: ObservableObject, Identifiable {
             }
         }
 
-        let previous = systemBrightness ?? value
         systemBrightness = value
-
-        if boostGain > 1, value < 0.995 {
-            let deliberateStep = previous - value >= 0.04 // one F1 press is 1/16
-            if deliberateStep {
-                // The user turned brightness down: follow them, drop the boost.
-                boostGain = 1
-                defaults.set(boostGain, forKey: "boost.\(key)")
-            } else if model?.holdFullBrightness ?? false {
-                // Small drift (auto-brightness etc.) while boosting: put 100 % back.
-                restoreFullBrightness()
-            }
+        // A real step down (one F1 press is 1/16) means the user wants it darker: drop the boost.
+        if boostGain > 1, value < 0.995, previous - value >= 0.04 {
+            overlayLog.info("display \(self.displayID) brightness stepped down \(previous, format: .fixed(precision: 3)) -> \(value, format: .fixed(precision: 3)), boost off")
+            boostGain = 1
+            defaults.set(boostGain, forKey: "boost.\(key)")
         }
-        applyOverlay(animated: true)
-    }
-
-    /// "Hold full brightness" setting. At most once every 2 s, only while boosting.
-    private func restoreFullBrightness() {
-        guard controlsSystemBrightness, Date().timeIntervalSince(lastHoldWrite) > 2 else { return }
-        lastHoldWrite = Date()
-        expectOwnBrightness(1)
-        systemBrightness = 1
-        DisplayServices.setBrightness(displayID, 1)
-        observation?.noteOwnWrite(1)
     }
 
     private func refreshHeadroom() {
         let potential = Double(screen.maximumPotentialExtendedDynamicRangeColorComponentValue)
         let current = Double(screen.maximumExtendedDynamicRangeColorComponentValue)
+        let changed = abs(current - currentHeadroom) > 0.01 || abs(potential - potentialHeadroom) > 0.01
         if potential != potentialHeadroom { potentialHeadroom = potential }
         if current != currentHeadroom { currentHeadroom = current }
 
-        // macOS raises the current headroom lazily after EDR content appears; give it time.
-        let gain = effectiveGain
-        if gain > 1.0001, let since = overlayActiveSince, Date().timeIntervalSince(since) > 1.5 {
-            let clipped = current + 0.02 < gain
+        let requested = requestedGain
+        if requested > 1.0001, let since = boostRequestedSince, Date().timeIntervalSince(since) > 1.5 {
+            let clipped = current + 0.02 < requested
             if clipped != highlightsClipped { highlightsClipped = clipped }
         }
+
+        if changed {
+            overlayLog.debug("display \(self.displayID) headroom current \(current, format: .fixed(precision: 2)) potential \(potential, format: .fixed(precision: 2))")
+            applyOverlay(animated: true)
+        }
+        if headroomTimer != nil { startHeadroomMonitor() } // drop to the slow rate after the fast window
     }
 
+    /// 10 Hz for 30 s after a boost starts or the screen changes, 2 Hz otherwise.
     private func startHeadroomMonitor() {
-        guard headroomTimer == nil else { return }
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.refreshHeadroom() }
-        timer.tolerance = 0.5
+        let interval: TimeInterval = Date() < fastPollUntil ? 0.1 : 0.5
+        if let headroomTimer, headroomTimer.isValid, headroomTimerInterval == interval { return }
+        headroomTimer?.invalidate()
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in self?.refreshHeadroom() }
+        timer.tolerance = interval * 0.2
         RunLoop.main.add(timer, forMode: .common)
         headroomTimer = timer
+        headroomTimerInterval = interval
     }
 
     private func stopHeadroomMonitor() {
         headroomTimer?.invalidate()
         headroomTimer = nil
+        headroomTimerInterval = 0
     }
 }

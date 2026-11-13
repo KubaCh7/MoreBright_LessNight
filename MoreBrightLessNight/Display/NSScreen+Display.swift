@@ -1,4 +1,5 @@
 import AppKit
+import ColorSync
 
 extension NSScreen {
     var displayID: CGDirectDisplayID? {
@@ -8,8 +9,14 @@ extension NSScreen {
 
 /// Stable per-panel key for persisting settings (survives reboots and reconnects,
 /// unlike CGDirectDisplayID which can change).
+/// Many monitors report serial 0, so two identical ones would collide; then the
+/// ColorSync display UUID (stable per panel/port) is appended.
 func persistentKey(for display: CGDirectDisplayID) -> String {
-    "\(CGDisplayVendorNumber(display))-\(CGDisplayModelNumber(display))-\(CGDisplaySerialNumber(display))"
+    let base = "\(CGDisplayVendorNumber(display))-\(CGDisplayModelNumber(display))-\(CGDisplaySerialNumber(display))"
+    guard CGDisplaySerialNumber(display) == 0,
+          let uuid = CGDisplayCreateUUIDFromDisplayID(display)?.takeRetainedValue(),
+          let string = CFUUIDCreateString(nil, uuid) as String? else { return base }
+    return base + "-" + string
 }
 
 /// Brightness model of a panel, in nits. Used only to place the knee on the slider

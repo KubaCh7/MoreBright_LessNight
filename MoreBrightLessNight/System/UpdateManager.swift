@@ -109,6 +109,7 @@ final class UpdateManager: ObservableObject {
 
     private var timer: Timer?
     private var progressObservation: NSKeyValueObservation?
+    private var didScheduleLaunchCheck = false
 
     init() {
         currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
@@ -135,7 +136,10 @@ final class UpdateManager: ObservableObject {
         timer = nil
         guard automaticChecks else { return }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in self?.checkIfDue() }
+        if !didScheduleLaunchCheck {
+            didScheduleLaunchCheck = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 15) { [weak self] in self?.checkIfDue() }
+        }
         let timer = Timer(timeInterval: 60 * 60, repeats: true) { [weak self] _ in self?.checkIfDue() }
         timer.tolerance = 10 * 60
         RunLoop.main.add(timer, forMode: .common)
@@ -213,6 +217,7 @@ final class UpdateManager: ObservableObject {
             state = .downloading(0)
             let expected = try await Self.fetchChecksum(checksumAsset.browserDownloadUrl)
             let image = try await download(dmg.browserDownloadUrl)
+            progressObservation = nil
 
             state = .installing
             let staged = try await Task.detached(priority: .userInitiated) {
@@ -222,6 +227,7 @@ final class UpdateManager: ObservableObject {
             try Self.launchReplacer(newApp: staged, destination: destination)
             NSApp.terminate(nil)
         } catch {
+            progressObservation = nil
             state = .failed(error.localizedDescription)
         }
     }

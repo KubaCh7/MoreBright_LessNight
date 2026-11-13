@@ -1,6 +1,9 @@
 import AppKit
 import Metal
 import QuartzCore
+import os
+
+let overlayLog = Logger(subsystem: "app.morebrightlessnight", category: "overlay")
 
 /// A window that can never take focus, clicks, or a place in Cmd+Tab / Mission Control.
 final class OverlayWindow: NSWindow {
@@ -12,37 +15,29 @@ final class OverlayWindow: NSWindow {
 /// in extended linear sRGB. With a multiply compositing filter the WindowServer computes
 /// `destination * m`, i.e. a pure linear gain on every channel: hue and white point stay put.
 ///
-/// Rendering: no display link, no continuous loop. A frame is drawn only while a ramp
-/// (200 ms, ease-out) is running; afterwards the layer stays static. When the gain returns
-/// to 1.0 the window is ordered out entirely, so EDR disengages and costs nothing.
+/// macOS only grants EDR headroom while an EDR surface keeps *presenting* frames. A layer
+/// that goes static loses its headroom within about a second and the boost collapses to 1×
+/// (BrightIntosh renders at 5 fps for this reason; BetterDisplay calls it "continuous EDR
+/// enforcement"). So while the gain is above 1.0 we present a 1×1 clear at 5 Hz on a private
+/// queue. During a change we ramp at ~120 Hz for 200 ms (ease-out). At 1.0 the window is
+/// ordered out and the loop stops completely.
 final class EDROverlay {
-    static let rampDuration: CFTimeInterval = 0.2
-
     private let window: OverlayWindow
-    private let metalLayer = CAMetalLayer()
-    private let commandQueue: MTLCommandQueue
-    private let renderQueue = DispatchQueue(label: "MoreBrightLessNight.overlay.render", qos: .userInteractive)
-
-    // renderQueue-confined
-    private var displayedGain: Double = 1
-    private var rampFrom: Double = 1
-    private var rampTo: Double = 1
-    private var rampStart: CFTimeInterval = 0
-    private var rampTimer: DispatchSourceTimer?
+    private let loop: RenderLoop
 
     // main-confined
     private var isOrderedIn = false
     private var generation = 0
 
     init?(screen: NSScreen) {
-        guard let device = MTLCreateSystemDefaultDevice(),
-              let queue = device.makeCommandQueue() else { return nil }
-        commandQueue = queue
+        guard let loop = RenderLoop() else { return nil }
+        self.loop = loop
 
         window = OverlayWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
         window.setFrame(screen.frame, display: false)
         window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
-        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
+        window.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .stationary,
+                                     .ignoresCycle, .fullScreenAuxiliary]
         window.ignoresMouseEvents = true
         window.isOpaque = false
         window.hasShadow = false
@@ -54,36 +49,32 @@ final class EDROverlay {
         window.animationBehavior = .none
         window.isExcludedFromWindowsMenu = true
 
-        metalLayer.device = device
-        metalLayer.pixelFormat = .rgba16Float
-        metalLayer.colorspace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)
-        metalLayer.wantsExtendedDynamicRangeContent = true
-        metalLayer.isOpaque = false
-        metalLayer.framebufferOnly = true
-        // Content is uniform, so a tiny drawable stretched over the screen is enough.
-        metalLayer.drawableSize = CGSize(width: 16, height: 16)
-        metalLayer.contentsGravity = .resize
-        // "multiply" is the CA filter name BrightIntosh ships with; it blends with the
-        // windows underneath during WindowServer compositing.
-        metalLayer.compositingFilter = "multiply"
-
         let view = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
-        view.layer = metalLayer
+        view.layer = loop.layer
         view.wantsLayer = true
         view.autoresizingMask = [.width, .height]
         window.contentView = view
-
-        renderQueue.sync { self.render(gain: 1) }
     }
 
     deinit {
-        rampTimer?.cancel()
+        loop.stop()
         window.orderOut(nil)
         window.close()
     }
 
+    /// True while the window is on screen (and therefore presenting at ≥ 5 Hz).
+    var isPresenting: Bool { isOrderedIn }
+
+    /// Seconds since the last successfully presented frame, for diagnostics.
+    var secondsSinceLastFrame: Double? {
+        let last = loop.lastPresentTime
+        guard last > 0 else { return nil }
+        return CACurrentMediaTime() - last
+    }
+
     func updateFrame(for screen: NSScreen) {
         window.setFrame(screen.frame, display: false)
+        loop.redraw()
     }
 
     /// Test mode only: lets ScreenCaptureKit see the boosted composite.
@@ -100,77 +91,170 @@ final class EDROverlay {
             window.orderFrontRegardless()
             isOrderedIn = true
         }
-        renderQueue.async { [weak self] in
-            self?.startRamp(to: target, animated: animated, token: token)
+        loop.setTarget(target, animated: animated) { [weak self] in
+            DispatchQueue.main.async {
+                guard let self, self.generation == token else { return }
+                self.window.orderOut(nil)
+                self.isOrderedIn = false
+            }
         }
+    }
+
+    func forceRedraw() {
+        loop.redraw()
     }
 
     func tearDown() {
         generation += 1
-        renderQueue.sync {
-            rampTimer?.cancel()
-            rampTimer = nil
-        }
+        loop.stop()
         window.orderOut(nil)
         isOrderedIn = false
     }
+}
 
-    // MARK: renderQueue
+/// All Metal work and all mutable render state live on `queue`.
+private final class RenderLoop {
+    static let rampDuration: CFTimeInterval = 0.2
+    static let rampIntervalMs = 8
+    static let keepAliveIntervalMs = 200 // 5 Hz
 
-    private func startRamp(to target: Double, animated: Bool, token: Int) {
-        rampTimer?.cancel()
-        rampTimer = nil
+    let layer = CAMetalLayer()
+    private let commandQueue: MTLCommandQueue
+    private let queue = DispatchQueue(label: "MoreBrightLessNight.overlay.render", qos: .userInteractive)
 
-        if !animated || abs(target - displayedGain) < 0.001 {
-            render(gain: target)
-            settle(at: target, token: token)
-            return
-        }
+    // queue-confined
+    private var currentValue: Double = 1
+    private var target: Double = 1
+    private var rampFrom: Double = 1
+    private var rampStart: CFTimeInterval = 0
+    private var ramping = false
+    private var timer: DispatchSourceTimer?
+    private var timerIntervalMs = 0
+    private var onSettledAtOne: (() -> Void)?
 
-        rampFrom = displayedGain
-        rampTo = target
-        rampStart = CACurrentMediaTime()
-
-        let timer = DispatchSource.makeTimerSource(queue: renderQueue)
-        timer.schedule(deadline: .now(), repeating: .milliseconds(8), leeway: .milliseconds(1))
-        timer.setEventHandler { [weak self] in self?.tick(token: token) }
-        rampTimer = timer
-        timer.resume()
+    private let lock = NSLock()
+    private var _lastPresentTime: CFTimeInterval = 0
+    var lastPresentTime: CFTimeInterval {
+        lock.lock()
+        defer { lock.unlock() }
+        return _lastPresentTime
     }
 
-    private func tick(token: Int) {
+    init?() {
+        guard let device = MTLCreateSystemDefaultDevice(),
+              let commandQueue = device.makeCommandQueue() else { return nil }
+        self.commandQueue = commandQueue
+
+        layer.device = device
+        layer.pixelFormat = .rgba16Float
+        layer.colorspace = CGColorSpace(name: CGColorSpace.extendedLinearSRGB)
+        layer.wantsExtendedDynamicRangeContent = true
+        layer.isOpaque = false
+        layer.backgroundColor = CGColor(red: 1, green: 1, blue: 1, alpha: 1)
+        layer.framebufferOnly = true
+        layer.allowsNextDrawableTimeout = true
+        layer.maximumDrawableCount = 3
+        // Content is uniform, so a 1×1 drawable stretched over the screen is enough.
+        layer.drawableSize = CGSize(width: 1, height: 1)
+        layer.contentsGravity = .resize
+        // "multiply" is the CA filter name BrightIntosh ships with; it blends with the
+        // windows underneath during WindowServer compositing.
+        layer.compositingFilter = "multiply"
+    }
+
+    func setTarget(_ newTarget: Double, animated: Bool, settledAtOne: @escaping () -> Void) {
+        queue.async { [self] in
+            target = newTarget
+            onSettledAtOne = settledAtOne
+            if animated, abs(newTarget - currentValue) > 0.001 {
+                rampFrom = currentValue
+                rampStart = CACurrentMediaTime()
+                ramping = true
+                schedule(intervalMs: Self.rampIntervalMs)
+            } else {
+                ramping = false
+                draw(newTarget)
+                settle()
+            }
+        }
+    }
+
+    func redraw() {
+        queue.async { [self] in
+            if target > 1.0001 || ramping { draw(currentValue) }
+        }
+    }
+
+    func stop() {
+        queue.async { [self] in
+            stopTimer()
+            ramping = false
+            onSettledAtOne = nil
+        }
+    }
+
+    // MARK: queue
+
+    private func tick() {
+        guard ramping else {
+            draw(currentValue) // keep-alive frame: keeps macOS granting EDR headroom
+            return
+        }
         let progress = min(1, (CACurrentMediaTime() - rampStart) / Self.rampDuration)
         let remaining = 1 - progress
         let eased = 1 - remaining * remaining * remaining // ease-out cubic
-        render(gain: rampFrom + (rampTo - rampFrom) * eased)
+        draw(rampFrom + (target - rampFrom) * eased)
         if progress >= 1 {
-            rampTimer?.cancel()
-            rampTimer = nil
-            settle(at: rampTo, token: token)
+            ramping = false
+            settle()
         }
     }
 
-    private func settle(at gain: Double, token: Int) {
-        guard gain <= 1.0001 else { return }
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.generation == token else { return }
-            self.window.orderOut(nil)
-            self.isOrderedIn = false
+    private func settle() {
+        if target > 1.0001 {
+            schedule(intervalMs: Self.keepAliveIntervalMs)
+        } else {
+            stopTimer()
+            onSettledAtOne?()
+            onSettledAtOne = nil
         }
     }
 
-    private func render(gain: Double) {
-        displayedGain = gain
-        guard let drawable = metalLayer.nextDrawable(),
+    private func schedule(intervalMs: Int) {
+        if timer != nil, timerIntervalMs == intervalMs { return }
+        stopTimer()
+        let source = DispatchSource.makeTimerSource(queue: queue)
+        source.schedule(deadline: .now(), repeating: .milliseconds(intervalMs), leeway: .milliseconds(max(1, intervalMs / 8)))
+        source.setEventHandler { [weak self] in self?.tick() }
+        timer = source
+        timerIntervalMs = intervalMs
+        source.resume()
+    }
+
+    private func stopTimer() {
+        timer?.cancel()
+        timer = nil
+        timerIntervalMs = 0
+    }
+
+    private func draw(_ value: Double) {
+        currentValue = value
+        guard let drawable = layer.nextDrawable(),
               let commandBuffer = commandQueue.makeCommandBuffer() else { return }
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = drawable.texture
         pass.colorAttachments[0].loadAction = .clear
         pass.colorAttachments[0].storeAction = .store
-        pass.colorAttachments[0].clearColor = MTLClearColor(red: gain, green: gain, blue: gain, alpha: 1)
+        pass.colorAttachments[0].clearColor = MTLClearColor(red: value, green: value, blue: value, alpha: 1)
         guard let encoder = commandBuffer.makeRenderCommandEncoder(descriptor: pass) else { return }
         encoder.endEncoding()
         commandBuffer.present(drawable)
+        commandBuffer.addCompletedHandler { [weak self] buffer in
+            guard let self, buffer.status == .completed else { return }
+            self.lock.lock()
+            self._lastPresentTime = CACurrentMediaTime()
+            self.lock.unlock()
+        }
         commandBuffer.commit()
     }
 }
