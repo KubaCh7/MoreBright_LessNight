@@ -5,7 +5,10 @@ import Foundation
 enum UpdateConfig {
     static let owner = "KubaCh7"
     static let repository = "MoreBright_LessNight"
-    static let latestReleaseURL = URL(string: "https://api.github.com/repos/\(owner)/\(repository)/releases/latest")!
+    static let repositoryURL = URL(string: "https://github.com/\(owner)/\(repository)")!
+    /// Website redirect to /releases/tag/<tag>. Not the REST API, so no 60/h rate limit.
+    static let latestReleaseURL = repositoryURL.appendingPathComponent("releases/latest")
+    static let dmgName = "MoreBrightLessNight.dmg"
     static let checkInterval: TimeInterval = 24 * 60 * 60
 }
 
@@ -32,24 +35,20 @@ struct AppVersion: Comparable, CustomStringConvertible {
     }
 }
 
-struct GitHubRelease: Decodable {
-    struct Asset: Decodable {
-        let name: String
-        let browserDownloadUrl: URL
-        let size: Int
-    }
+/// A published release, derived from the tag only. The release workflow always uploads
+/// `MoreBrightLessNight.dmg` and `MoreBrightLessNight.dmg.sha256`.
+struct ReleaseInfo {
+    let tag: String
+    let version: AppVersion
 
-    let tagName: String
-    let name: String?
-    let htmlUrl: URL
-    let assets: [Asset]
-
-    var dmgAsset: Asset? { assets.first { $0.name.lowercased().hasSuffix(".dmg") } }
-    func asset(named name: String) -> Asset? { assets.first { $0.name == name } }
+    var pageURL: URL { UpdateConfig.repositoryURL.appendingPathComponent("releases/tag/\(tag)") }
+    var dmgURL: URL { UpdateConfig.repositoryURL.appendingPathComponent("releases/download/\(tag)/\(UpdateConfig.dmgName)") }
+    var checksumURL: URL { dmgURL.appendingPathExtension("sha256") }
 }
 
 enum UpdateError: LocalizedError {
     case http(Int)
+    case rateLimited
     case missingChecksum
     case checksumMismatch
     case noAppInImage
@@ -62,6 +61,7 @@ enum UpdateError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .http(let code): return String(localized: "GitHub returned an error.") + " (HTTP \(code))"
+        case .rateLimited: return String(localized: "GitHub is limiting requests right now. Try again later.")
         case .missingChecksum: return String(localized: "The release has no checksum file, so the update can't be verified.")
         case .checksumMismatch: return String(localized: "The download is damaged (checksum mismatch).")
         case .noAppInImage: return String(localized: "The disk image doesn't contain the app.")
@@ -97,7 +97,7 @@ final class UpdateManager: ObservableObject {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var lastChecked: Date?
-    @Published private(set) var availableRelease: GitHubRelease?
+    @Published private(set) var availableRelease: ReleaseInfo?
     @Published var automaticChecks: Bool {
         didSet {
             UserDefaults.standard.set(automaticChecks, forKey: Keys.automatic)
@@ -158,33 +158,30 @@ final class UpdateManager: ObservableObject {
         state = .checking
         do {
             var request = URLRequest(url: UpdateConfig.latestReleaseURL)
+            request.httpMethod = "HEAD"
             request.cachePolicy = .reloadIgnoringLocalCacheData
-            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
             request.setValue("MoreBrightLessNight-Updater", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (_, response) = try await URLSession.shared.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 403 || status == 429 { throw UpdateError.rateLimited }
             markChecked()
 
-            if status == 404 { // no published release yet
+            // Redirect target: …/releases/tag/v1.2.3. Anything else means no release yet.
+            guard status == 200, let finalURL = response.url,
+                  finalURL.path.contains("/releases/tag/") else {
                 availableRelease = nil
                 state = .upToDate
                 return
             }
-            guard status == 200 else { throw UpdateError.http(status) }
-
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let release = try decoder.decode(GitHubRelease.self, from: data)
-
-            guard let latest = AppVersion(release.tagName),
+            let tag = finalURL.lastPathComponent
+            guard let latest = AppVersion(tag),
                   let current = AppVersion(currentVersion),
-                  latest > current,
-                  release.dmgAsset != nil else {
+                  latest > current else {
                 availableRelease = nil
                 state = .upToDate
                 return
             }
-            availableRelease = release
+            availableRelease = ReleaseInfo(tag: tag, version: latest)
             state = .available(latest.description)
         } catch {
             state = userInitiated ? .failed(error.localizedDescription) : .idle
@@ -205,18 +202,15 @@ final class UpdateManager: ObservableObject {
 
     @MainActor
     private func install() async {
-        guard let release = availableRelease, let dmg = release.dmgAsset, !isBusy else { return }
+        guard let release = availableRelease, !isBusy else { return }
         do {
             let destination = Bundle.main.bundleURL
             try Self.checkInstallLocation(destination)
-            guard let checksumAsset = release.asset(named: dmg.name + ".sha256") else {
-                throw UpdateError.missingChecksum
-            }
             let bundleID = Bundle.main.bundleIdentifier ?? ""
 
             state = .downloading(0)
-            let expected = try await Self.fetchChecksum(checksumAsset.browserDownloadUrl)
-            let image = try await download(dmg.browserDownloadUrl)
+            let expected = try await Self.fetchChecksum(release.checksumURL)
+            let image = try await download(release.dmgURL)
             progressObservation = nil
 
             state = .installing
@@ -266,6 +260,7 @@ final class UpdateManager: ObservableObject {
     private static func fetchChecksum(_ url: URL) async throws -> String {
         let (data, response) = try await URLSession.shared.data(from: url)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if status == 404 { throw UpdateError.missingChecksum }
         guard status == 200 else { throw UpdateError.http(status) }
         let token = String(decoding: data, as: UTF8.self)
             .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })

@@ -51,6 +51,16 @@
         }
       }
     },
+    "Boost Technique": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technika podbicia"
+          }
+        }
+      }
+    },
     "Brightness for %@": {
       "localizations": {
         "pl": {
@@ -307,6 +317,16 @@
         }
       }
     },
+    "GitHub is limiting requests right now. Try again later.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub chwilowo ogranicza zapytania. Spróbuj później."
+          }
+        }
+      }
+    },
     "GitHub returned an error.": {
       "localizations": {
         "pl": {
@@ -388,7 +408,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brightness for %@"
+            "value": "Last checked: %@"
           }
         }
       }
@@ -519,6 +539,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Przenieś MoreBrightLessNight do folderu Aplikacje, żeby instalować aktualizacje."
+          }
+        }
+      }
+    },
+    "Multiply overlay": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nakładka multiply"
           }
         }
       }
@@ -793,6 +823,16 @@
         }
       }
     },
+    "Screen capture can't see a transfer-table boost. Switch the technique to Multiply overlay in Settings → Advanced to measure.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrzut ekranu nie widzi podbicia przez tabelę transferu. Żeby zmierzyć, przełącz technikę na Nakładkę multiply w Ustawienia → Zaawansowane."
+          }
+        }
+      }
+    },
     "ScreenCaptureKit did not return this display. Check Screen Recording permission in System Settings.": {
       "localizations": {
         "pl": {
@@ -909,6 +949,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Maksimum systemowe (nity)"
+          }
+        }
+      }
+    },
+    "Technique": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technika"
           }
         }
       }
@@ -1043,6 +1093,26 @@
         }
       }
     },
+    "Transfer table (recommended)": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabela transferu (zalecana)"
+          }
+        }
+      }
+    },
+    "Transfer table: the boost is applied in the display pipeline, like BetterDisplay and Lunar, so ⌘Tab and Space swipes can't interrupt it. Multiply overlay: a full-screen window does the boost; screenshots and the color test can see it, but window animations can briefly dim it.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabela transferu: podbicie działa w potoku wyświetlania, jak w BetterDisplay i Lunar, więc ⌘Tab i przesuwanie biurek go nie przerywają. Nakładka multiply: podbicie robi pełnoekranowe okno; widzą je zrzuty ekranu i test kolorów, ale animacje okien mogą je na chwilę przyciemnić."
+          }
+        }
+      }
+    },
     "Turn On": {
       "localizations": {
         "pl": {
@@ -1104,7 +1174,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Brightness for %@"
+            "value": "Version %@ is available"
           }
         }
       }

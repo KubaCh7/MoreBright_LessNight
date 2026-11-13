@@ -12,10 +12,23 @@ Aplikacja menu bar na macOS 14+ (Apple Silicon), która podnosi jasność SDR po
 
 ## Jak to działa
 
-- Dla każdego ekranu z `maximumPotentialExtendedDynamicRangeColorComponentValue > 1` powstaje pełnoekranowe, przezroczyste okno (`OverlayWindow`) na poziomie `CGShieldingWindowLevel`, click-through, bez fokusu, poza Mission Control i Cmd+Tab, wykluczone z nagrywania ekranu.
-- W oknie siedzi `CAMetalLayer` (`rgba16Float`, extended linear sRGB, `wantsExtendedDynamicRangeContent`) wypełniony jedną wartością `m > 1.0`, z `compositingFilter = "multiply"`. WindowServer liczy `piksel × m` osobno dla R, G i B. To czyste liniowe wzmocnienie: bez gammy, bez zmiany white pointa, bez tintu. True Tone, Night Shift i profil ICC zostają nietknięte.
-- **macOS daje zapas EDR tylko warstwie, która ciągle prezentuje klatki.** Statyczna warstwa traci headroom w około sekundę i boost spada do 1×. Dlatego podczas boostu overlay prezentuje klatkę 1×1 (sam clear) 5 razy na sekundę, na osobnej kolejce, nigdy na main thread. Tak samo robi BrightIntosh, a BetterDisplay nazywa to „continuous EDR enforcement”. Zmiany idą rampą 200 ms (ease-out). Przy `m = 1` okno znika, a pętla staje.
-- Wzmocnienie = `min(żądanie, bieżący headroom)`. macOS podnosi headroom stopniowo, więc aplikacja przez pierwsze 30 s czyta go z częstotliwością 10 Hz, potem 2 Hz, i płynnie za nim podąża. Dopóki headroom < 1,05, renderuje 1,12×, żeby „obudzić” EDR. Gdy po wybudzeniu macOS uparcie zgłasza 1,0, używa wartości potencjalnej.
+Dwie techniki do wyboru (Ustawienia → Zaawansowane). Obie wymagają ekranu z EDR headroom (`maximumPotentialExtendedDynamicRangeColorComponentValue > 1`).
+
+**Tabela transferu (domyślna, jak BetterDisplay „color table”, Lunar i BrightIntosh)**
+- Okno 1×1 px w lewym górnym rogu, poziom `CGShieldingWindowLevel()+1`, prezentuje wartość EDR 1.6 z częstotliwością 5 Hz. To tylko „wyzwalacz”, który utrzymuje w macOS zapas EDR.
+- Samo podbicie robi `CGSetDisplayTransferByTable`: bieżąca tabela ekranu × `k`, gdzie `k = gain^(1/2.2)`.
+- Dla krzywej potęgowej `(k·x)^γ = k^γ·x^γ`, czyli to czyste liniowe wzmocnienie każdego kanału. Kolor i white point zostają, a to, co system miał w tabeli, jest zachowane.
+- Działa w potoku wyświetlania, więc ⌘Tab, przesuwanie biurek trzema palcami i Mission Control go nie przerywają.
+- Co 2 s aplikacja sprawdza, czy ktoś nie podmienił tabeli, i w razie potrzeby nakłada podbicie od nowa.
+- macOS sam przywraca tabele po zakończeniu procesu, więc crash niczego nie zostawia.
+
+**Nakładka multiply (alternatywa)**
+- Pełnoekranowe, przezroczyste okno (`CAMetalLayer`, `rgba16Float`, extended linear sRGB, `compositingFilter = "multiply"`) mnoży wszystko pod sobą przez stałą wartość > 1.
+- Widzą je zrzuty ekranu i test kolorów, ale animacje okien mogą je na chwilę przyciemnić.
+
+**Wspólne**
+- macOS daje zapas EDR tylko warstwie, która ciągle prezentuje klatki, stąd 5 Hz. Przy 1× okna znikają, a pętla staje.
+- Wzmocnienie = `min(żądanie, headroom)`. Krótkie spadki headroomu są przeczekiwane do 3 s.
 
 ### Tryby i suwak
 
@@ -113,11 +126,12 @@ CI (`.github/workflows/build.yml`) buduje projekt na `macos-15` przy każdym pus
 4. **Headroom rośnie z opóźnieniem.** macOS podnosi `maximumExtendedDynamicRangeColorComponentValue` dopiero po pojawieniu się treści EDR (do kilku sekund). Ostrzeżenie o clippingu pojawia się po 1,5 s stabilizacji i może chwilę mrugnąć na starcie.
 5. **Skalowany jest cały zakres.** W trybie 1600 najniższe poziomy jasności są ~3× jaśniejsze niż w trybie Standard. Do ciemnych warunków przełącz na Standard (skrót ⌃⌥⌘B).
 6. **Chwilowe spadki headroomu** (Cmd+Tab, przełączanie biurek, Mission Control) są przeczekiwane do 3 s. Dopiero dłuższy spadek obniża wzmocnienie. Jeśli spadek robi sam macOS, krótkie przyciemnienie wciąż może być widoczne, bo kompozytor obcina obraz do realnego headroomu.
-7. **Zmiana jasności suwakiem to prawdziwa zmiana jasności macOS**, więc Vorsaint może pokazać swoją animację. To jego reakcja, nie nasz HUD.
-8. **Koszt energii.** Overlay prezentuje 5 klatek/s (1×1 piksel, pomijalne dla GPU), WindowServer komponuje multiply na całym ekranie, a panel świeci mocniej. Bateria schodzi wyraźnie szybciej.
-9. **Test ΔE zależy od ScreenCaptureKit.** Na macOS 14 SCK zwykle zwraca SDR (wartości przycięte do 1.0), więc pomiar nie zobaczy boostu i UI to jawnie zgłosi. Na macOS 15+ używany jest `captureDynamicRange = .hdrLocalDisplay`. ΔE liczone jest przy założeniu prymarów sRGB w zrzucie. Jeśli system odda linear P3, wartości ΔE będą lekko przesunięte, ale „0 = brak przesunięcia” nadal obowiązuje.
-10. **Ekrany zewnętrzne.** Ekrany bez EDR są oznaczone jako niewspierane. Zewnętrzne ekrany z EDR, które nie obsługują `DisplayServices`, mają suwak sterujący siłą overlayu (0% = bez podbicia, 100% = wybrane maksimum).
-11. **Suwak w stylu Centrum sterowania jest własnym widokiem**, bo natywny `Slider` nie ma tego wyglądu. Dla VoiceOver i klawiatury ma `accessibilityRepresentation` w postaci standardowego `Slider` oraz obsługę strzałek.
-12. **Aktualizacje bez Developer ID.** Weryfikacja opiera się na HTTPS do GitHuba i SHA-256 z tego samego wydania. Chroni to przed uszkodzonym pobraniem, ale nie przed kimś, kto przejmie repozytorium lub konto. Prawdziwa ochrona wymaga Developer ID i sprawdzania Team ID (albo Sparkle z kluczem EdDSA).
-13. **Uprawnienie Nagrywanie ekranu znika po każdej aktualizacji**, bo przy podpisie ad-hoc macOS wiąże je z hashem binarki. Dotyczy tylko testu kolorów.
-14. **Skrót globalny** to jedna z kilku gotowych kombinacji (⌃⌥⌘B / L / ↑). Brak nagrywarki dowolnego skrótu.
+7. **Tabela transferu koliduje z innymi aplikacjami, które ją zmieniają** (f.lux, Gamma Control, BetterDisplay, Lunar, BrightIntosh). Używaj jednej naraz. Test kolorów (zrzut ekranu) nie widzi podbicia tabelą transferu: do pomiaru przełącz na nakładkę.
+8. **Zmiana jasności suwakiem to prawdziwa zmiana jasności macOS**, więc Vorsaint może pokazać swoją animację. To jego reakcja, nie nasz HUD.
+9. **Koszt energii.** Overlay prezentuje 5 klatek/s (1×1 piksel, pomijalne dla GPU), WindowServer komponuje multiply na całym ekranie, a panel świeci mocniej. Bateria schodzi wyraźnie szybciej.
+10. **Test ΔE zależy od ScreenCaptureKit.** Na macOS 14 SCK zwykle zwraca SDR (wartości przycięte do 1.0), więc pomiar nie zobaczy boostu i UI to jawnie zgłosi. Na macOS 15+ używany jest `captureDynamicRange = .hdrLocalDisplay`. ΔE liczone jest przy założeniu prymarów sRGB w zrzucie. Jeśli system odda linear P3, wartości ΔE będą lekko przesunięte, ale „0 = brak przesunięcia” nadal obowiązuje.
+11. **Ekrany zewnętrzne.** Ekrany bez EDR są oznaczone jako niewspierane. Zewnętrzne ekrany z EDR, które nie obsługują `DisplayServices`, mają suwak sterujący siłą overlayu (0% = bez podbicia, 100% = wybrane maksimum).
+12. **Suwak w stylu Centrum sterowania jest własnym widokiem**, bo natywny `Slider` nie ma tego wyglądu. Dla VoiceOver i klawiatury ma `accessibilityRepresentation` w postaci standardowego `Slider` oraz obsługę strzałek.
+13. **Aktualizacje bez Developer ID.** Weryfikacja opiera się na HTTPS do GitHuba i SHA-256 z tego samego wydania. Chroni to przed uszkodzonym pobraniem, ale nie przed kimś, kto przejmie repozytorium lub konto. Prawdziwa ochrona wymaga Developer ID i sprawdzania Team ID (albo Sparkle z kluczem EdDSA).
+14. **Uprawnienie Nagrywanie ekranu znika po każdej aktualizacji**, bo przy podpisie ad-hoc macOS wiąże je z hashem binarki. Dotyczy tylko testu kolorów.
+15. **Skrót globalny** to jedna z kilku gotowych kombinacji (⌃⌥⌘B / L / ↑). Brak nagrywarki dowolnego skrótu.

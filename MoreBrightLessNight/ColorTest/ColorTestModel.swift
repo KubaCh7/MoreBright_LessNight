@@ -47,7 +47,7 @@ struct ColorTestResult {
 }
 
 enum ColorTestError: LocalizedError {
-    case noWindow, notBoosted, noDisplay, noImage
+    case noWindow, notBoosted, noDisplay, noImage, transferTable
 
     var errorDescription: String? {
         switch self {
@@ -55,6 +55,7 @@ enum ColorTestError: LocalizedError {
         case .notBoosted: return String(localized: "Choose 1000 nit or 1600 nit first, so there is a boost to measure.")
         case .noDisplay: return String(localized: "ScreenCaptureKit did not return this display. Check Screen Recording permission in System Settings.")
         case .noImage: return String(localized: "The capture returned no image.")
+        case .transferTable: return String(localized: "Screen capture can't see a transfer-table boost. Switch the technique to Multiply overlay in Settings → Advanced to measure.")
         }
     }
 }
@@ -84,6 +85,7 @@ final class ColorTestModel: ObservableObject {
                   let controller = app?.screens.first(where: { $0.displayID == displayID }) else {
                 throw ColorTestError.noWindow
             }
+            if app?.technique == .gammaTable { throw ColorTestError.transferTable }
             let expected = controller.effectiveGain
             guard expected > 1.01 else { throw ColorTestError.notBoosted }
 

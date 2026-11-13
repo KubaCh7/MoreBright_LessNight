@@ -22,6 +22,15 @@ final class OverlayWindow: NSWindow {
 /// queue. During a change we ramp at ~120 Hz for 200 ms (ease-out). At 1.0 the window is
 /// ordered out and the loop stops completely.
 final class EDROverlay {
+    enum Mode {
+        /// Full screen, multiply-composited: the overlay itself applies the gain.
+        case multiply
+        /// 1×1 px in the top-left corner, no compositing filter: only keeps EDR headroom
+        /// engaged while the transfer table does the boost (BrightIntosh's "HDR trigger").
+        case trigger
+    }
+
+    let mode: Mode
     private let window: OverlayWindow
     private let loop: RenderLoop
 
@@ -29,13 +38,17 @@ final class EDROverlay {
     private var isOrderedIn = false
     private var generation = 0
 
-    init?(screen: NSScreen) {
-        guard let loop = RenderLoop() else { return nil }
+    init?(screen: NSScreen, mode: Mode = .multiply) {
+        guard let loop = RenderLoop(multiply: mode == .multiply) else { return nil }
         self.loop = loop
+        self.mode = mode
 
-        window = OverlayWindow(contentRect: screen.frame, styleMask: [.borderless], backing: .buffered, defer: false)
-        window.setFrame(screen.frame, display: false)
-        window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()))
+        let frame = Self.frame(for: screen, mode: mode)
+        window = OverlayWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.setFrame(frame, display: false)
+        // The trigger sits one level higher: fullscreen apps and games can reorder windows
+        // at the shielding level, and a hidden trigger loses EDR (BrightIntosh does the same).
+        window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + (mode == .trigger ? 1 : 0))
         window.collectionBehavior = [.canJoinAllSpaces, .canJoinAllApplications, .stationary,
                                      .ignoresCycle, .fullScreenAuxiliary]
         window.ignoresMouseEvents = true
@@ -49,7 +62,7 @@ final class EDROverlay {
         window.animationBehavior = .none
         window.isExcludedFromWindowsMenu = true
 
-        let view = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
+        let view = NSView(frame: NSRect(origin: .zero, size: frame.size))
         view.layer = loop.layer
         view.wantsLayer = true
         view.autoresizingMask = [.width, .height]
@@ -72,8 +85,15 @@ final class EDROverlay {
         return CACurrentMediaTime() - last
     }
 
+    private static func frame(for screen: NSScreen, mode: Mode) -> NSRect {
+        switch mode {
+        case .multiply: return screen.frame
+        case .trigger: return NSRect(x: screen.frame.minX, y: screen.frame.maxY - 1, width: 1, height: 1)
+        }
+    }
+
     func updateFrame(for screen: NSScreen) {
-        window.setFrame(screen.frame, display: false)
+        window.setFrame(Self.frame(for: screen, mode: mode), display: false)
         loop.redraw()
     }
 
@@ -148,7 +168,7 @@ private final class RenderLoop {
         return _lastPresentTime
     }
 
-    init?() {
+    init?(multiply: Bool) {
         guard let device = MTLCreateSystemDefaultDevice(),
               let commandQueue = device.makeCommandQueue() else { return nil }
         self.commandQueue = commandQueue
@@ -167,7 +187,7 @@ private final class RenderLoop {
         layer.contentsGravity = .resize
         // "multiply" is the CA filter name BrightIntosh ships with; it blends with the
         // windows underneath during WindowServer compositing.
-        layer.compositingFilter = "multiply"
+        if multiply { layer.compositingFilter = "multiply" }
     }
 
     func setTarget(_ newTarget: Double, animated: Bool, settledAtOne: @escaping () -> Void) {

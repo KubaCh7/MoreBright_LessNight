@@ -60,6 +60,15 @@ enum BoostLevel: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the boost is produced.
+enum BoostTechnique: String, CaseIterable, Identifiable {
+    /// Transfer table × gain, EDR kept alive by a 1×1 trigger. Survives ⌘Tab / Space swipes.
+    case gammaTable
+    /// Full-screen multiply-composited EDR overlay.
+    case overlay
+    var id: String { rawValue }
+}
+
 /// One physical display.
 ///
 /// Brightness model: "100 % macOS = 100 % of the chosen maximum".
@@ -95,6 +104,8 @@ final class ScreenController: ObservableObject, Identifiable {
 
     private var screen: NSScreen
     private var overlay: EDROverlay?
+    private var trigger: EDROverlay?
+    private lazy var gamma = GammaBoost(display: displayID)
     private var observation: BrightnessObservation?
     private let canWriteBrightness: Bool
     private var pendingBrightness: Double?
@@ -156,6 +167,9 @@ final class ScreenController: ObservableObject, Identifiable {
         stopHeadroomMonitor()
         overlay?.tearDown()
         overlay = nil
+        trigger?.tearDown()
+        trigger = nil
+        gamma.restoreNow()
     }
 
     // MARK: Derived state
@@ -216,8 +230,10 @@ final class ScreenController: ObservableObject, Identifiable {
 
     // MARK: Diagnostics
 
-    var overlayIsPresenting: Bool { overlay?.isPresenting ?? false }
-    var secondsSinceLastFrame: Double? { overlay?.secondsSinceLastFrame }
+    private var technique: BoostTechnique { model?.technique ?? .gammaTable }
+    private var edrWindow: EDROverlay? { technique == .gammaTable ? trigger : overlay }
+    var overlayIsPresenting: Bool { edrWindow?.isPresenting ?? false }
+    var secondsSinceLastFrame: Double? { edrWindow?.secondsSinceLastFrame }
 
     // MARK: User actions
 
@@ -251,6 +267,7 @@ final class ScreenController: ObservableObject, Identifiable {
         if name != screen.localizedName { name = screen.localizedName }
         if boostRequestedSince != nil { fastPollUntil = Date().addingTimeInterval(30) }
         overlay?.updateFrame(for: screen)
+        trigger?.updateFrame(for: screen)
         refreshHeadroom()
         applyOverlay(animated: true)
     }
@@ -278,11 +295,26 @@ final class ScreenController: ObservableObject, Identifiable {
         }
 
         let gain = effectiveGain
-        if gain > 1.0001 {
-            if overlay == nil { overlay = EDROverlay(screen: screen) }
-            overlay?.setGain(gain, animated: animated)
-        } else {
-            overlay?.setGain(1, animated: animated)
+        switch technique {
+        case .gammaTable:
+            overlay?.setGain(1, animated: false)
+            if gain > 1.0001 {
+                if trigger == nil { trigger = EDROverlay(screen: screen, mode: .trigger) }
+                trigger?.setGain(Self.triggerValue, animated: false)
+                gamma.setGain(gain, animated: animated)
+            } else {
+                gamma.setGain(1, animated: animated)
+                trigger?.setGain(1, animated: false)
+            }
+        case .overlay:
+            gamma.setGain(1, animated: false)
+            trigger?.setGain(1, animated: false)
+            if gain > 1.0001 {
+                if overlay == nil { overlay = EDROverlay(screen: screen) }
+                overlay?.setGain(gain, animated: animated)
+            } else {
+                overlay?.setGain(1, animated: animated)
+            }
         }
         if abs(gain - appliedGain) > 0.005 {
             overlayLog.info("display \(self.displayID) gain \(self.appliedGain, format: .fixed(precision: 2)) -> \(gain, format: .fixed(precision: 2)) (requested \(self.requestedGain, format: .fixed(precision: 2)), headroom \(self.currentHeadroom, format: .fixed(precision: 2)))")
@@ -293,12 +325,16 @@ final class ScreenController: ObservableObject, Identifiable {
     /// App switch, Space change: make sure the overlay is still on top and poll fast for a bit.
     func reassertOverlay() {
         guard overlayIsPresenting else { return }
-        overlay?.orderFront()
+        edrWindow?.orderFront()
         fastPollUntil = max(fastPollUntil, Date().addingTimeInterval(5))
         startHeadroomMonitor()
     }
 
     // MARK: Private
+
+    /// EDR value the 1×1 trigger shows (BrightIntosh uses 1.6). It only has to be above 1.0
+    /// for macOS to grant headroom; the transfer table does the actual boost.
+    private static let triggerValue = 1.6
 
     /// Coalesced to ≤ 30 writes/s while dragging. Only ever called from a user action.
     private func writeBrightness(_ value: Double) {

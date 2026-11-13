@@ -11,11 +11,20 @@ final class AppModel: ObservableObject {
         static let onlyOnAC = "onlyOnACPower"
         static let hotKey = "hotKeyChoice"
         static let boostLevel = "boostLevel"
+        static let technique = "boostTechnique"
         static let lastBoostLevel = "lastBoostLevel"
     }
 
     @Published private(set) var screens: [ScreenController] = []
     @Published private(set) var boostLevel: BoostLevel
+
+    @Published var technique: BoostTechnique {
+        didSet {
+            defaults.set(technique.rawValue, forKey: Keys.technique)
+            overlayLog.info("technique \(self.technique.rawValue, privacy: .public)")
+            screens.forEach { $0.modeDidChange() }
+        }
+    }
     @Published private(set) var pauseReason: PauseReason?
     @Published private(set) var peakAutoDisabled = false
     @Published private(set) var launchAtLoginError: String?
@@ -46,6 +55,7 @@ final class AppModel: ObservableObject {
 
     init() {
         let defaults = UserDefaults.standard
+        technique = defaults.string(forKey: Keys.technique).flatMap(BoostTechnique.init(rawValue:)) ?? .gammaTable
         if let saved = defaults.string(forKey: Keys.boostLevel).flatMap(BoostLevel.init(rawValue:)) {
             boostLevel = saved
         } else {

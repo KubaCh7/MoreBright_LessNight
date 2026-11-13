@@ -99,7 +99,7 @@ private struct UpdateSettingsSection: View {
                 }
             }
             if let release = updates.availableRelease {
-                Link("Release Notes", destination: release.htmlUrl)
+                Link("Release Notes", destination: release.pageURL)
             }
         } header: {
             Text("Updates")
@@ -206,6 +206,18 @@ struct AdvancedSettingsView: View {
         Form {
             ForEach(model.screens.filter(\.supportsEDR)) { screen in
                 NitsProfileSection(screen: screen)
+            }
+
+            Section {
+                Picker("Technique", selection: $model.technique) {
+                    Text("Transfer table (recommended)").tag(BoostTechnique.gammaTable)
+                    Text("Multiply overlay").tag(BoostTechnique.overlay)
+                }
+            } header: {
+                Text("Boost Technique")
+            } footer: {
+                Text("Transfer table: the boost is applied in the display pipeline, like BetterDisplay and Lunar, so ⌘Tab and Space swipes can't interrupt it. Multiply overlay: a full-screen window does the boost; screenshots and the color test can see it, but window animations can briefly dim it.")
+                    .foregroundStyle(.secondary)
             }
 
             Section {
