@@ -191,8 +191,8 @@ struct ScreenBrightnessRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(10)
-        .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(12)
+        .glassCard(cornerRadius: 14)
         .accessibilityElement(children: .contain)
     }
 }

@@ -60,29 +60,48 @@ struct ColorTestView: View {
             PatchesRepresentable(test: test)
                 .frame(width: PatchesNSView.cellSize.width * CGFloat(ReferencePatch.columns),
                        height: PatchesNSView.cellSize.height * CGFloat(ReferencePatch.rows))
-                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .padding(8)
+                .glassCard(cornerRadius: 14)
+                .frame(maxWidth: .infinity)
 
-            HStack(spacing: 8) {
-                Button("Measure") { Task { await test.measure() } }
-                    .disabled(test.isRunning)
-                    .keyboardShortcut(.defaultAction)
+            HStack(spacing: 10) {
+                Button {
+                    Task { await test.measure() }
+                } label: {
+                    Label("Measure", systemImage: "eyedropper.halffull")
+                        .padding(.horizontal, 4)
+                }
+                .glassButton(prominent: true)
+                .controlSize(.large)
+                .disabled(test.isRunning)
+                .keyboardShortcut(.defaultAction)
                 if test.isRunning {
                     ProgressView().controlSize(.small)
                 }
             }
 
             if let error = test.errorMessage {
-                Text(verbatim: error)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+                Label {
+                    Text(verbatim: error)
+                        .fixedSize(horizontal: false, vertical: true)
+                } icon: {
+                    Image(systemName: "info.circle.fill").foregroundStyle(.blue)
+                }
+                .font(.callout)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .glassCard(cornerRadius: 12)
             }
 
             if let result = test.result {
                 ResultView(result: result)
+                    .padding(12)
+                    .glassCard(cornerRadius: 12)
             }
         }
-        .padding(16)
-        .frame(width: PatchesNSView.cellSize.width * CGFloat(ReferencePatch.columns) + 32)
+        .padding(20)
+        .frame(width: 580)
     }
 }
 
