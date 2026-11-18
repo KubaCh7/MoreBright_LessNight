@@ -28,7 +28,7 @@ Dwie techniki do wyboru (Ustawienia → Zaawansowane). Obie wymagają ekranu z E
 
 **Wspólne**
 - macOS daje zapas EDR tylko warstwie, która ciągle prezentuje klatki, stąd 5 Hz. Przy 1× okna znikają, a pętla staje.
-- Wzmocnienie = `min(żądanie, headroom)`. Krótkie spadki headroomu są przeczekiwane do 3 s.
+- Wzmocnienie = `min(żądanie, headroom)`. Krótkie spadki headroomu są przeczekiwane do 10 s.
 
 ### Tryby i suwak
 
@@ -37,7 +37,14 @@ Wybór w popoverze: **Standard / 1000 nit / 1600 nit**. Zasada: **100% jasności
 - Suwak i klawisze F1/F2 to zwykła jasność macOS 0–100% (`DisplayServicesSetBrightness`, zapis tylko przy ruchu suwakiem).
 - W trybie 1000 lub 1600 nakładka mnoży cały obraz przez stały czynnik `maks. nity / 500` (×2 lub ×3,2, nigdy powyżej headroomu). macOS 100% daje więc 1000 albo 1600 nitów, a każdy niższy poziom skaluje się proporcjonalnie.
 - Klawisze jasności, auto-jasność i Centrum sterowania działają natywnie. Aplikacja niczego nie zapisuje z powrotem i nie przechwytuje klawiszy.
-- Tryb 1600 przy pierwszym włączeniu wymaga potwierdzenia. Gdy Mac się nagrzeje (`.fair`), sam schodzi do 1000.
+- Tryb 1600 przy pierwszym włączeniu wymaga potwierdzenia. Gdy macOS daje mniej zapasu EDR, niż tryb chce (np. przy nagrzanym panelu), wzmocnienie jest **ograniczane** do tego zapasu (bez przycinania), a popover pokazuje „Panel daje teraz do X nit”. Ostrzeżenie „Highlights clipped” pojawia się tylko przy faktycznym przycinaniu.
+
+### Harmonogram i reguły aplikacji
+
+- **Harmonogram** (Ustawienia → Ogólne): przełączanie trybu o wschodzie i zachodzie słońca (np. 1600 po wschodzie, Standard po zachodzie) albo o własnych godzinach.
+  - Wschód i zachód są liczone lokalnie wzorem NOAA z przybliżonej lokalizacji. Zgoda na lokalizację jest potrzebna raz, pozycja jest zapamiętywana i odświeżana raz na dobę.
+  - Działa jak Night Shift: ręczna zmiana obowiązuje do następnego przełączenia.
+- **Reguły aplikacji** (Ustawienia → Aplikacje): gdy wybrana aplikacja jest na pierwszym planie, jej tryb zastępuje wybraną jasność (np. Lightroom → Standard).
 
 ### Zero ingerencji (Vorsaint)
 
@@ -48,7 +55,14 @@ Wybór w popoverze: **Standard / 1000 nit / 1600 nit**. Zasada: **100% jasności
 
 ### Bezpieczeństwo
 
-- **Wstrzymuj podczas wideo** (przełącznik w popoverze i w Ustawieniach, domyślnie włączony). Wideo HDR samo korzysta z zapasu EDR, a podbicie tabelą przepala jego jasne partie. Co 2 s aplikacja czyta publicznym `IOPMCopyAssertionsByProcess` blokady uśpienia ekranu, które trzymają odtwarzacze i przeglądarki podczas wideo (WebKit, Chrome „Video Wake Lock”, TV, QuickTime, IINA, VLC…), i na ten czas wstrzymuje podbicie. macOS nie mówi, czy wideo jest HDR, więc wideo SDR też je wstrzymuje.
+- **Wstrzymuj podczas wideo** (przełącznik w popoverze i w Ustawieniach, domyślnie włączony). Wideo HDR samo korzysta z zapasu EDR, a podbicie tabelą przepala jego jasne partie. Co 2 s aplikacja czyta publicznym `IOPMCopyAssertionsByProcess` blokady uśpienia ekranu i wstrzymuje podbicie tylko wtedy, gdy blokada:
+  - ma w nazwie „video” (Chrome „Video Wake Lock”, Firefox),
+  - należy do odtwarzacza (TV, QuickTime, IINA, VLC, Infuse, Plex, mpv, Netflix, Disney+),
+  - albo pochodzi z WebKitu, gdy Safari jest na pierwszym planie.
+
+  Inne aplikacje z WebKitem (Mail, Wiadomości) już go nie wstrzymują. macOS nie mówi, czy wideo jest HDR, więc wideo SDR też je wstrzymuje.
+- Ustawienia → Ekrany → „Ostatnie automatyczne wstrzymanie” pokazuje powód i godzinę ostatniej pauzy. Ikona na pasku menu jest pełna, gdy podbicie działa, i konturowa w trybie Standard lub podczas pauzy.
+- Okno EDR jest pilnowane co 0,5 s: jeśli zostanie zasłonięte albo przestanie prezentować klatki, wraca na wierzch.
 
 - Overlay wyłącza się przy `thermalState >= .serious`, na baterii poniżej 20%, przy uśpieniu ekranu lub systemu, blokadzie ekranu, wygaszaczu, przełączeniu użytkownika i podłączeniu lub odłączeniu ekranu, oraz (opcjonalnie) na baterii w ogóle. Po ustąpieniu przyczyny wraca po 5 s, żeby macOS zdążył odbudować EDR.
 - Tryb 1600 wyłącza się sam (trwale) od `.fair` w górę. Pierwsze włączenie wymaga potwierdzenia w dialogu.
@@ -127,7 +141,7 @@ CI (`.github/workflows/build.yml`) buduje projekt na `macos-15` przy każdym pus
 3. **Nity to model, nie pomiar.** 500/1000/1600 to domyślny profil MacBooka Pro XDR (edytowalny w Zaawansowanych). Realną jasność decyduje macOS i ABL panelu: przy dużej powierzchni bieli 1600 nitów pełnoekranowo nie wystąpi, system przytnie do ok. 1000. Wtedy aplikacja pokaże „highlights clipped”, bo czyta bieżący headroom.
 4. **Headroom rośnie z opóźnieniem.** macOS podnosi `maximumExtendedDynamicRangeColorComponentValue` dopiero po pojawieniu się treści EDR (do kilku sekund). Ostrzeżenie o clippingu pojawia się po 1,5 s stabilizacji i może chwilę mrugnąć na starcie.
 5. **Skalowany jest cały zakres.** W trybie 1600 najniższe poziomy jasności są ~3× jaśniejsze niż w trybie Standard. Do ciemnych warunków przełącz na Standard (skrót ⌃⌥⌘B).
-6. **Chwilowe spadki headroomu** (Cmd+Tab, przełączanie biurek, Mission Control) są przeczekiwane do 3 s. Dopiero dłuższy spadek obniża wzmocnienie. Jeśli spadek robi sam macOS, krótkie przyciemnienie wciąż może być widoczne, bo kompozytor obcina obraz do realnego headroomu.
+6. **Chwilowe spadki headroomu** (Cmd+Tab, przełączanie biurek, Mission Control) są przeczekiwane do 10 s. Dopiero dłuższy spadek obniża wzmocnienie. Jeśli spadek robi sam macOS, krótkie przyciemnienie wciąż może być widoczne, bo kompozytor obcina obraz do realnego headroomu.
 7. **Tabela transferu koliduje z innymi aplikacjami, które ją zmieniają** (f.lux, Gamma Control, BetterDisplay, Lunar, BrightIntosh). Używaj jednej naraz. Test kolorów (zrzut ekranu) nie widzi podbicia tabelą transferu: do pomiaru przełącz na nakładkę.
 8. **Zmiana jasności suwakiem to prawdziwa zmiana jasności macOS**, więc Vorsaint może pokazać swoją animację. To jego reakcja, nie nasz HUD.
 9. **Koszt energii.** Overlay prezentuje 5 klatek/s (1×1 piksel, pomijalne dla GPU), WindowServer komponuje multiply na całym ekranie, a panel świeci mocniej. Bateria schodzi wyraźnie szybciej.

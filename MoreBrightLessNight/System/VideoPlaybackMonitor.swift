@@ -19,17 +19,10 @@ final class VideoPlaybackMonitor {
     private var timer: Timer?
 
     private static let displaySleepTypes: Set<String> = ["PreventUserIdleDisplaySleep", "NoDisplaySleepAssertion"]
-    private static let videoAppPrefixes = [
-        "com.apple.WebKit", "com.apple.Safari", "com.apple.TV", "com.apple.QuickTimePlayerX",
-        "com.apple.Photos", "com.google.Chrome", "company.thebrowser", "org.mozilla.firefox",
-        "com.microsoft.edgemac", "com.brave.Browser", "com.operasoftware", "com.vivaldi",
-        "com.colliderli.iina", "org.videolan.vlc", "io.mpv", "com.firecore.infuse",
-        "tv.plex", "com.plexapp", "com.netflix", "com.disney",
-    ]
-
-    private static let videoPathMarkers = [
-        "WebKit", "Google Chrome", "Chromium", "Arc.app", "Firefox", "Microsoft Edge",
-        "Brave Browser", "Opera", "Vivaldi", "IINA", "VLC", "Infuse", "Plex",
+    /// Dedicated players: any display-sleep assertion from them means video.
+    private static let playerPrefixes = [
+        "com.apple.TV", "com.apple.QuickTimePlayerX", "com.colliderli.iina", "org.videolan.vlc",
+        "io.mpv", "com.firecore.infuse", "tv.plex", "com.plexapp", "com.netflix", "com.disney",
     ]
 
     private static func executablePath(_ pid: pid_t) -> String? {
@@ -71,6 +64,7 @@ final class VideoPlaybackMonitor {
         guard IOPMCopyAssertionsByProcess(&unmanaged) == kIOReturnSuccess,
               let byPID = unmanaged?.takeRetainedValue() as NSDictionary? else { return false }
         let ownPID = ProcessInfo.processInfo.processIdentifier
+        let safariInFront = NSWorkspace.shared.frontmostApplication?.bundleIdentifier?.hasPrefix("com.apple.Safari") ?? false
 
         for (key, value) in byPID {
             guard let pid = (key as? NSNumber)?.int32Value, pid != ownPID,
@@ -82,11 +76,13 @@ final class VideoPlaybackMonitor {
                 return true
             }
             if let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier,
-               videoAppPrefixes.contains(where: { bundleID.hasPrefix($0) }) {
+               playerPrefixes.contains(where: { bundleID.hasPrefix($0) }) {
                 return true
             }
-            // Helper / XPC processes (WebKit GPU process, browser helpers) aren't apps.
-            if let path = executablePath(pid), videoPathMarkers.contains(where: { path.contains($0) }) {
+            // Safari plays video in a WebKit helper process whose assertion isn't named
+            // "video". Every app embedding WebKit (Mail, Messages, App Store...) has such
+            // helpers too, so only trust it while Safari itself is in front.
+            if safariInFront, let path = executablePath(pid), path.contains("com.apple.WebKit") {
                 return true
             }
         }

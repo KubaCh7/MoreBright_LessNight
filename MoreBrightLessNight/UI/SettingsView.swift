@@ -7,10 +7,12 @@ struct SettingsView: View {
                 .tabItem { Label("General", systemImage: "gearshape") }
             DisplaysSettingsView()
                 .tabItem { Label("Displays", systemImage: "display") }
+            AppRulesSettingsView()
+                .tabItem { Label("Apps", systemImage: "square.grid.2x2") }
             AdvancedSettingsView()
                 .tabItem { Label("Advanced", systemImage: "gearshape.2") }
         }
-        .frame(width: 500, height: 460)
+        .frame(width: 520, height: 520)
     }
 }
 
@@ -36,9 +38,11 @@ struct GeneralSettingsView: View {
             } header: {
                 Text("Maximum Brightness")
             } footer: {
-                Text("Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness, lowered to 1000 nit automatically when your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.")
+                Text("Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness; macOS caps it when the panel or your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.")
                     .foregroundStyle(.secondary)
             }
+
+            ScheduleSection()
 
             Section {
                 Toggle("Pause during video", isOn: $model.pauseForVideo)
@@ -149,6 +153,18 @@ struct DisplaysSettingsView: View {
 
     var body: some View {
         Form {
+            Section {
+                LabeledContent("Last automatic pause") {
+                    if let pause = model.lastPause {
+                        Text(verbatim: "\(pause.reason.title), \(pause.date.formatted(date: .omitted, time: .shortened))")
+                    } else {
+                        Text("None")
+                    }
+                }
+            } footer: {
+                Text("If the screen ever dims on its own, this shows why.")
+                    .foregroundStyle(.secondary)
+            }
             ForEach(model.screens) { screen in
                 DisplaySettingsSection(screen: screen)
             }
@@ -196,6 +212,7 @@ private struct DisplaySettingsSection: View {
                     value: Binding(get: { screen.position }, set: { screen.setPosition($0) }),
                     accessibilityLabel: Text("Brightness for \(screen.name)")
                 )
+                if let nits = screen.limitedToNits { HeadroomLimitNote(nits: nits) }
                 if screen.highlightsClipped { ClippedWarning() }
             }
         } header: {
@@ -266,5 +283,112 @@ private struct NitsProfileSection: View {
                 screen.updateProfile(profile)
             }
         )
+    }
+}
+
+// MARK: - Schedule
+
+/// Standard / sustained / peak options for any level picker.
+struct LevelOptions: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Text("Standard").tag(BoostLevel.off)
+        Text(verbatim: "\(Int(model.maxNits(for: .sustained).rounded())) nit").tag(BoostLevel.sustained)
+        Text(verbatim: "\(Int(model.maxNits(for: .peak).rounded())) nit").tag(BoostLevel.peak)
+    }
+}
+
+private struct ScheduleSection: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Section {
+            Toggle("Schedule", isOn: $model.scheduleEnabled)
+            if model.scheduleEnabled {
+                Picker("Switch at", selection: $model.scheduleKind) {
+                    Text("Sunrise and sunset").tag(ScheduleKind.sun)
+                    Text("Custom times").tag(ScheduleKind.custom)
+                }
+
+                if model.scheduleKind == .sun {
+                    if let times = model.todaysSunTimes {
+                        LabeledContent("Sunrise today") { Text(times.sunrise, style: .time) }
+                        LabeledContent("Sunset today") { Text(times.sunset, style: .time) }
+                    } else if let error = model.location.lastError {
+                        Text(verbatim: error)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Button("Try Again") { model.location.refreshIfNeeded(force: true) }
+                    } else {
+                        Text("Waiting for your location…").foregroundStyle(.secondary)
+                    }
+                    Picker("After sunrise", selection: $model.dayLevel) { LevelOptions() }
+                    Picker("After sunset", selection: $model.nightLevel) { LevelOptions() }
+                } else {
+                    DatePicker("Day starts at", selection: model.timeBinding(\.dayStartMinutes), displayedComponents: .hourAndMinute)
+                    Picker("Day mode", selection: $model.dayLevel) { LevelOptions() }
+                    DatePicker("Night starts at", selection: model.timeBinding(\.nightStartMinutes), displayedComponents: .hourAndMinute)
+                    Picker("Night mode", selection: $model.nightLevel) { LevelOptions() }
+                }
+            }
+        } header: {
+            Text("Schedule")
+        } footer: {
+            Text("Switches the maximum brightness automatically. A manual change stays until the next switch, like Night Shift. Your location is used only to calculate sunrise and sunset, on this Mac.")
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Apps
+
+struct AppRulesSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form {
+            Section {
+                if model.appRules.isEmpty {
+                    Text("No apps yet.").foregroundStyle(.secondary)
+                }
+                ForEach(model.sortedRuleIDs, id: \.self) { bundleID in
+                    HStack(spacing: 10) {
+                        Image(nsImage: model.appIcon(bundleID))
+                            .resizable()
+                            .frame(width: 20, height: 20)
+                            .accessibilityHidden(true)
+                        Picker(selection: model.ruleBinding(bundleID)) {
+                            LevelOptions()
+                        } label: {
+                            Text(verbatim: model.appName(bundleID))
+                        }
+                        Button {
+                            model.setRule(bundleID, level: nil)
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .symbolRenderingMode(.hierarchical)
+                        }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel(Text("Remove"))
+                    }
+                }
+            } header: {
+                Text("App Rules")
+            } footer: {
+                Text("While one of these apps is in front, its mode replaces the selected maximum brightness, for example Standard for photo editing.")
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
+                HStack {
+                    Button("Add App…") { model.addRuleFromPanel() }
+                    if let id = model.lastForeignBundleID, model.appRules[id] == nil {
+                        Button("Add \(model.appName(id))") { model.setRule(id, level: .off) }
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
     }
 }

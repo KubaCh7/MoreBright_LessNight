@@ -187,12 +187,15 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MoreBrightLessNight;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSLocationUsageDescription = "Używane tylko do obliczenia wschodu i zachodu słońca dla harmonogramu jasności. Used only to calculate sunrise and sunset for the brightness schedule.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używane tylko do obliczenia wschodu i zachodu słońca dla harmonogramu jasności. Used only to calculate sunrise and sunset for the brightness schedule.";
+				CODE_SIGN_ENTITLEMENTS = Config/MoreBrightLessNight.entitlements;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.2;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.morebrightlessnight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -214,12 +217,15 @@
 				INFOPLIST_KEY_CFBundleDisplayName = MoreBrightLessNight;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSLocationUsageDescription = "Używane tylko do obliczenia wschodu i zachodu słońca dla harmonogramu jasności. Used only to calculate sunrise and sunset for the brightness schedule.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Używane tylko do obliczenia wschodu i zachodu słońca dla harmonogramu jasności. Used only to calculate sunrise and sunset for the brightness schedule.";
+				CODE_SIGN_ENTITLEMENTS = Config/MoreBrightLessNight.entitlements;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.2;
+				MARKETING_VERSION = 0.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.morebrightlessnight;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

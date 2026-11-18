@@ -128,6 +128,17 @@ final class EDROverlay {
         loop.redraw()
     }
 
+    /// Called every ~0.5 s while boosting. A covered or silent EDR window loses headroom.
+    func ensureAlive() {
+        guard isOrderedIn else { return }
+        let stale = (secondsSinceLastFrame ?? 0) > 1
+        let hidden = !window.occlusionState.contains(.visible)
+        guard stale || hidden else { return }
+        overlayLog.info("EDR window \(hidden ? "covered" : "stale", privacy: .public), re-fronting")
+        window.orderFrontRegardless()
+        loop.redraw()
+    }
+
     func forceRedraw() {
         loop.redraw()
     }

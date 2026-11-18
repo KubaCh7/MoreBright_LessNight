@@ -95,6 +95,9 @@ final class ScreenController: ObservableObject, Identifiable {
     @Published private(set) var overlayFraction: Double
     @Published private(set) var appliedGain: Double = 1
     @Published private(set) var highlightsClipped = false
+    /// Set when macOS grants less headroom than the mode asks for: the boost is capped (not
+    /// clipped) and the screen tops out at about this many nits.
+    @Published private(set) var limitedToNits: Double?
     @Published private(set) var profile: NitsProfile
 
     /// Used by the color test to force a gain temporarily.
@@ -124,7 +127,7 @@ final class ScreenController: ObservableObject, Identifiable {
     /// short transient dips (Cmd+Tab, Space switch, Mission Control animations) don't dim.
     private var stableHeadroom: Double = 1
     private var headroomDipSince: Date?
-    private static let dipGrace: TimeInterval = 3
+    private static let dipGrace: TimeInterval = 10
     private let defaults = UserDefaults.standard
 
     init(screen: NSScreen, displayID: CGDirectDisplayID, model: AppModel) {
@@ -178,7 +181,7 @@ final class ScreenController: ObservableObject, Identifiable {
 
     var supportsEDR: Bool { potentialHeadroom > 1.0 }
     var controlsSystemBrightness: Bool { canWriteBrightness && systemBrightness != nil }
-    var boostLevel: BoostLevel { model?.boostLevel ?? .off }
+    var boostLevel: BoostLevel { model?.effectiveLevel ?? .off }
 
     /// Gain that turns macOS 100 % into the chosen maximum, never above potential headroom.
     var maxGain: Double {
@@ -294,6 +297,7 @@ final class ScreenController: ObservableObject, Identifiable {
             boostRequestedSince = nil
             stopHeadroomMonitor()
             if highlightsClipped { highlightsClipped = false }
+            if limitedToNits != nil { limitedToNits = nil }
         }
 
         let gain = effectiveGain
@@ -408,9 +412,21 @@ final class ScreenController: ObservableObject, Identifiable {
 
         let requested = requestedGain
         if requested > 1.0001, let since = boostRequestedSince, Date().timeIntervalSince(since) > 1.5 {
-            let clipped = current + 0.02 < requested
+            // Real clipping only happens when we render above what macOS grants (e.g. while
+            // holding through a dip). Otherwise the gain is capped and nothing clips.
+            let clipped = appliedGain > current + 0.05
             if clipped != highlightsClipped { highlightsClipped = clipped }
+            let limit: Double? = requested > current + 0.05 && current >= 1.05 ? profile.sdrNits * current : nil
+            let shouldUpdate: Bool
+            switch (limit, limitedToNits) {
+            case (nil, nil): shouldUpdate = false
+            case let (new?, old?): shouldUpdate = abs(new - old) > 25 // avoid flicker
+            default: shouldUpdate = true
+            }
+            if shouldUpdate { limitedToNits = limit }
         }
+        // Keep the EDR window alive: re-front it if it got covered or stopped presenting.
+        edrWindow?.ensureAlive()
 
         if changed || stableChanged {
             overlayLog.debug("display \(self.displayID) headroom current \(current, format: .fixed(precision: 2)) potential \(potential, format: .fixed(precision: 2))")

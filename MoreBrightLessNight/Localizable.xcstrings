@@ -11,6 +11,42 @@
         }
       }
     },
+    "Add": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj"
+          }
+        }
+      }
+    },
+    "Add %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %@"
+          }
+        }
+      }
+    },
+    "Add App…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj aplikację…"
+          }
+        }
+      }
+    },
     "Advanced": {
       "localizations": {
         "pl": {
@@ -21,12 +57,52 @@
         }
       }
     },
+    "After sunrise": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Po wschodzie słońca"
+          }
+        }
+      }
+    },
+    "After sunset": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Po zachodzie słońca"
+          }
+        }
+      }
+    },
+    "App Rules": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reguły aplikacji"
+          }
+        }
+      }
+    },
     "Applied gain": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Zastosowane wzmocnienie"
+          }
+        }
+      }
+    },
+    "Apps": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aplikacje"
           }
         }
       }
@@ -187,6 +263,16 @@
         }
       }
     },
+    "Custom times": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Własne godziny"
+          }
+        }
+      }
+    },
     "Cyan": {
       "localizations": {
         "pl": {
@@ -213,6 +299,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ciemna skóra"
+          }
+        }
+      }
+    },
+    "Day mode": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb w dzień"
+          }
+        }
+      }
+    },
+    "Day starts at": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dzień od"
           }
         }
       }
@@ -357,12 +463,22 @@
         }
       }
     },
-    "Highlights clipped: the panel can't show this level right now": {
+    "Highlights clipped right now": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Highlights clipped: panel nie pokaże teraz tego poziomu"
+            "value": "Highlights clipped: jasne tony są teraz przycinane"
+          }
+        }
+      }
+    },
+    "If the screen ever dims on its own, this shows why.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeśli ekran kiedyś sam przygaśnie, tu zobaczysz dlaczego."
           }
         }
       }
@@ -403,6 +519,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skrót klawiszowy"
+          }
+        }
+      }
+    },
+    "Last automatic pause": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ostatnie automatyczne wstrzymanie"
           }
         }
       }
@@ -449,6 +575,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Jasna skóra"
+          }
+        }
+      }
+    },
+    "Location access is off. Allow MoreBrightLessNight in System Settings → Privacy & Security → Location Services, or use custom times.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dostęp do lokalizacji jest wyłączony. Zezwól MoreBrightLessNight w Ustawienia systemowe → Prywatność i ochrona → Usługi lokalizacji albo użyj własnych godzin."
           }
         }
       }
@@ -523,6 +659,32 @@
         }
       }
     },
+    "Mode set by the schedule": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb ustawiony przez harmonogram"
+          }
+        }
+      }
+    },
+    "Mode set for %@": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb ustawiony dla: %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode set for %@"
+          }
+        }
+      }
+    },
     "MoreBrightLessNight can't replace itself in its current folder. Move it to the Applications folder.": {
       "localizations": {
         "pl": {
@@ -563,6 +725,36 @@
         }
       }
     },
+    "Night mode": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tryb w nocy"
+          }
+        }
+      }
+    },
+    "Night starts at": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noc od"
+          }
+        }
+      }
+    },
+    "No apps yet.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak aplikacji."
+          }
+        }
+      }
+    },
     "No displays found": {
       "localizations": {
         "pl": {
@@ -579,6 +771,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Normalny"
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brak"
           }
         }
       }
@@ -733,16 +935,6 @@
         }
       }
     },
-    "Peak was lowered automatically because your Mac got warm": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tryb szczytowy obniżono automatycznie, bo Mac się nagrzał"
-          }
-        }
-      }
-    },
     "Potential EDR headroom": {
       "localizations": {
         "pl": {
@@ -823,6 +1015,16 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń"
+          }
+        }
+      }
+    },
     "Requested gain": {
       "localizations": {
         "pl": {
@@ -849,6 +1051,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bezpieczeństwo"
+          }
+        }
+      }
+    },
+    "Schedule": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Harmonogram"
           }
         }
       }
@@ -923,12 +1135,12 @@
         }
       }
     },
-    "Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness, lowered to 1000 nit automatically when your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.": {
+    "Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness; macOS caps it when the panel or your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Standard: zwykły zakres macOS. 1000 nit: tyle panel MacBooka Pro utrzyma na stałe. 1600 nit: jasność szczytowa, automatycznie obniżana do 1000 nit, gdy Mac się nagrzeje. Skalowany jest cały zakres, więc najniższe poziomy też są jaśniejsze."
+            "value": "Standard: zwykły zakres macOS. 1000 nit: tyle panel MacBooka Pro utrzyma na stałe. 1600 nit: jasność szczytowa; macOS ją ogranicza, gdy panel lub Mac się nagrzeje. Skalowany jest cały zakres, więc najniższe poziomy też są jaśniejsze."
           }
         }
       }
@@ -953,12 +1165,62 @@
         }
       }
     },
+    "Sunrise and sunset": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wschód i zachód słońca"
+          }
+        }
+      }
+    },
+    "Sunrise today": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wschód słońca dziś"
+          }
+        }
+      }
+    },
+    "Sunset today": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zachód słońca dziś"
+          }
+        }
+      }
+    },
     "Sustained (nits)": {
       "localizations": {
         "pl": {
           "stringUnit": {
             "state": "translated",
             "value": "Utrzymywalna (nity)"
+          }
+        }
+      }
+    },
+    "Switch at": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przełączaj"
+          }
+        }
+      }
+    },
+    "Switches the maximum brightness automatically. A manual change stays until the next switch, like Night Shift. Your location is used only to calculate sunrise and sunset, on this Mac.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatycznie zmienia maksymalną jasność. Ręczna zmiana obowiązuje do następnego przełączenia, jak w Night Shift. Lokalizacja służy tylko do obliczenia wschodu i zachodu słońca, na tym Macu."
           }
         }
       }
@@ -1073,6 +1335,22 @@
         }
       }
     },
+    "The panel gives up to %@ nit right now": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel daje teraz do %@ nit"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The panel gives up to %@ nit right now"
+          }
+        }
+      }
+    },
     "The release has no checksum file, so the update can't be verified.": {
       "localizations": {
         "pl": {
@@ -1143,6 +1421,16 @@
         }
       }
     },
+    "Try Again": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spróbuj ponownie"
+          }
+        }
+      }
+    },
     "Turn On": {
       "localizations": {
         "pl": {
@@ -1205,6 +1493,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Version %@ is available"
+          }
+        }
+      }
+    },
+    "Waiting for your location…": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czekam na lokalizację…"
+          }
+        }
+      }
+    },
+    "While one of these apps is in front, its mode replaces the selected maximum brightness, for example Standard for photo editing.": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gdy jedna z tych aplikacji jest na pierwszym planie, jej tryb zastępuje wybraną maksymalną jasność, np. Standard do edycji zdjęć."
           }
         }
       }

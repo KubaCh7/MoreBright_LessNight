@@ -74,6 +74,9 @@ struct ScreenBrightnessRow: View {
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
+                if let nits = screen.limitedToNits {
+                    HeadroomLimitNote(nits: nits)
+                }
                 if screen.highlightsClipped {
                     ClippedWarning()
                 }
@@ -103,13 +106,33 @@ struct StatusLabel: View {
 struct ClippedWarning: View {
     var body: some View {
         Label {
-            Text("Highlights clipped: the panel can't show this level right now")
+            Text("Highlights clipped right now")
         } icon: {
             Image(systemName: "exclamationmark.triangle.fill")
                 .symbolRenderingMode(.multicolor)
         }
         .font(.caption)
         .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// macOS grants less EDR headroom than the mode asks for (heat, panel limit). The boost is
+/// capped to it, so nothing clips; the display just tops out lower.
+struct HeadroomLimitNote: View {
+    let nits: Double
+
+    var body: some View {
+        // String interpolation keeps the catalog key "%@" (an Int would make it "%lld").
+        let value = String(Int(nits.rounded()))
+        Label {
+            Text("The panel gives up to \(value) nit right now")
+        } icon: {
+            Image(systemName: "info.circle")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -156,8 +179,10 @@ struct BoostLevelPicker: View {
             .pickerStyle(.segmented)
 
             Group {
-                if model.peakAutoDisabled {
-                    Text("Peak was lowered automatically because your Mac got warm")
+                if let app = model.activeRuleAppName {
+                    Text("Mode set for \(app)")
+                } else if model.scheduleControlsLevel {
+                    Text("Mode set by the schedule")
                 } else {
                     Text("Full macOS brightness equals the selected maximum. Brightness keys work as usual.")
                 }

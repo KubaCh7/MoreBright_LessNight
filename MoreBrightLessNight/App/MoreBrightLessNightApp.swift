@@ -10,7 +10,8 @@ struct MoreBrightLessNightApp: App {
                 .environmentObject(model)
         } label: {
             // Template image by default in the menu bar; fill follows the brightest display.
-            Image(systemName: "sun.max.fill", variableValue: model.iconLevel)
+            // Filled while the boost is on; outline in Standard or while paused.
+            Image(systemName: model.isBoostActive ? "sun.max.fill" : "sun.max", variableValue: model.iconLevel)
                 .accessibilityLabel(Text(verbatim: "MoreBrightLessNight"))
         }
         .menuBarExtraStyle(.window)
