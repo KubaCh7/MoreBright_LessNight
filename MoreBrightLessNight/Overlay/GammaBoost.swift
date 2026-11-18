@@ -44,14 +44,23 @@ final class GammaBoost {
         if let base, currentFactor != 1 { Self.write(display, base, factor: 1) }
     }
 
-    /// Main thread. `gain` is the linear gain wanted on screen.
-    func setGain(_ gain: Double, animated: Bool) {
-        let factor = Float(pow(max(1, gain), 1 / Self.gamma))
+    /// Main thread. `gain` is the linear gain wanted on screen, `headroom` the EDR headroom
+    /// macOS grants right now.
+    ///
+    /// No channel may exceed the headroom: True Tone / Night Shift / calibration make the
+    /// red (and green) curve end higher than blue, so pushing past the headroom clips the
+    /// warm channels first and white turns blue. The factor is capped so the highest
+    /// channel lands exactly at the headroom, keeping every channel ratio intact.
+    func setGain(_ gain: Double, headroom: Double, animated: Bool) {
+        let wanted = Float(pow(max(1, gain), 1 / Self.gamma))
+        let headroomEncoded = headroom >= 1.05 ? Float(pow(headroom, 1 / Self.gamma)) : 1
         queue.async { [self] in
             // Take a fresh copy of the system table every time a boost starts, so changes the
             // system made in between (ColorSync, display reconfiguration) are respected.
-            if factor > 1.0001, currentFactor <= 1.0001 { captureBase() }
-            guard base != nil else { return }
+            if wanted > 1.0001, currentFactor <= 1.0001 { captureBase() }
+            guard let base else { return }
+            let topOfTable = max(base.r.last ?? 1, base.g.last ?? 1, base.b.last ?? 1, 0.01)
+            let factor = max(1, min(wanted, headroomEncoded / topOfTable))
             targetFactor = factor
             if animated, abs(factor - currentFactor) > 0.001 {
                 rampFrom = currentFactor
@@ -160,14 +169,21 @@ final class GammaBoost {
     }
 
     private func checkIntegrity() {
-        guard rampTimer == nil, let base, let expected = base.r.last.map({ $0 * currentFactor }) else { return }
+        guard rampTimer == nil, let base,
+              let lastR = base.r.last, let lastG = base.g.last, let lastB = base.b.last else { return }
         var r = [CGGammaValue](repeating: 0, count: Int(Self.tableSize))
         var g = r
         var b = r
         var count: UInt32 = 0
         guard CGGetDisplayTransferByTable(display, Self.tableSize, &r, &g, &b, &count) == .success, count > 1 else { return }
-        let actual = r[Int(count) - 1]
-        guard abs(actual - expected) > Self.driftTolerance else { return }
+        let last = Int(count) - 1
+        // All three channels: Night Shift / True Tone may change only some of them.
+        let drift = max(abs(r[last] - lastR * currentFactor),
+                        abs(g[last] - lastG * currentFactor),
+                        abs(b[last] - lastB * currentFactor))
+        guard drift > Self.driftTolerance else { return }
+        let actual = r[last]
+        let expected = lastR * currentFactor
         overlayLog.info("display \(self.display) transfer table replaced (last \(actual, format: .fixed(precision: 3)), expected \(expected, format: .fixed(precision: 3))), re-applying")
         let n = Int(count)
         self.base = (Array(r.prefix(n)), Array(g.prefix(n)), Array(b.prefix(n)))

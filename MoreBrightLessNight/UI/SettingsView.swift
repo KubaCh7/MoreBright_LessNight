@@ -36,7 +36,7 @@ struct GeneralSettingsView: View {
             Section {
                 BoostLevelPicker()
             } header: {
-                Text("Maximum Brightness")
+                Label("Maximum Brightness", systemImage: "sun.max.fill")
             } footer: {
                 Text("Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness; macOS caps it when the panel or your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.")
                     .foregroundStyle(.secondary)
@@ -45,7 +45,13 @@ struct GeneralSettingsView: View {
             ScheduleSection()
 
             Section {
-                Toggle("Pause during video", isOn: $model.pauseForVideo)
+                Toggle(isOn: $model.pauseForVideo) {
+                    Label {
+                        Text("Pause during video")
+                    } icon: {
+                        Image(systemName: "play.rectangle.fill").foregroundStyle(.red)
+                    }
+                }
             } footer: {
                 Text("HDR video already uses the extra brightness, and the boost would blow out its highlights. While a player or browser plays video, the boost pauses and comes back when playback stops. SDR video pauses it too: macOS doesn't tell apps whether a video is HDR.")
                     .foregroundStyle(.secondary)
@@ -58,7 +64,7 @@ struct GeneralSettingsView: View {
                     }
                 }
             } header: {
-                Text("Keyboard Shortcut")
+                Label("Keyboard Shortcut", systemImage: "keyboard")
             } footer: {
                 Text("The brightness keys keep working normally and the slider follows them.")
                     .foregroundStyle(.secondary)
@@ -80,7 +86,7 @@ struct GeneralSettingsView: View {
                     }
                 }
             } header: {
-                Text("Safety")
+                Label("Safety", systemImage: "thermometer.medium")
             } footer: {
                 Text("The extra brightness turns off automatically when the thermal state is serious, when the battery is under 20 percent and while the display sleeps.")
                     .foregroundStyle(.secondary)
@@ -113,7 +119,7 @@ private struct UpdateSettingsSection: View {
                 Link("Release Notes", destination: release.pageURL)
             }
         } header: {
-            Text("Updates")
+            Label("Updates", systemImage: "arrow.down.circle.fill")
         } footer: {
             if let lastChecked = updates.lastChecked {
                 Text("Last checked: \(lastChecked.formatted(date: .abbreviated, time: .shortened))")
@@ -238,7 +244,7 @@ struct AdvancedSettingsView: View {
                     Text("Multiply overlay").tag(BoostTechnique.overlay)
                 }
             } header: {
-                Text("Boost Technique")
+                Label("Boost Technique", systemImage: "wand.and.stars")
             } footer: {
                 Text("Transfer table: the boost is applied in the display pipeline, like BetterDisplay and Lunar, so ⌘Tab and Space swipes can't interrupt it. Multiply overlay: a full-screen window does the boost; screenshots and the color test can see it, but window animations can briefly dim it.")
                     .foregroundStyle(.secondary)
@@ -247,7 +253,7 @@ struct AdvancedSettingsView: View {
             Section {
                 Button("Open Color Test…") { model.openColorTest() }
             } header: {
-                Text("Diagnostics")
+                Label("Diagnostics", systemImage: "stethoscope")
             } footer: {
                 Text("Shows reference patches and measures the color difference with and without the boost.")
                     .foregroundStyle(.secondary)
@@ -304,7 +310,13 @@ private struct ScheduleSection: View {
 
     var body: some View {
         Section {
-            Toggle("Schedule", isOn: $model.scheduleEnabled)
+            Toggle(isOn: $model.scheduleEnabled) {
+                Label {
+                    Text("Schedule")
+                } icon: {
+                    Image(systemName: "sun.horizon.fill").symbolRenderingMode(.multicolor)
+                }
+            }
             if model.scheduleEnabled {
                 Picker("Switch at", selection: $model.scheduleKind) {
                     Text("Sunrise and sunset").tag(ScheduleKind.sun)
@@ -333,7 +345,7 @@ private struct ScheduleSection: View {
                 }
             }
         } header: {
-            Text("Schedule")
+            Label("Schedule", systemImage: "sunrise.fill")
         } footer: {
             Text("Switches the maximum brightness automatically. A manual change stays until the next switch, like Night Shift. Your location is used only to calculate sunrise and sunset, on this Mac.")
                 .foregroundStyle(.secondary)
@@ -374,7 +386,7 @@ struct AppRulesSettingsView: View {
                     }
                 }
             } header: {
-                Text("App Rules")
+                Label("App Rules", systemImage: "square.grid.2x2.fill")
             } footer: {
                 Text("While one of these apps is in front, its mode replaces the selected maximum brightness, for example Standard for photo editing.")
                     .foregroundStyle(.secondary)

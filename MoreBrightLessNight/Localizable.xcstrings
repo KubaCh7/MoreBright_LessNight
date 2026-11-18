@@ -137,6 +137,16 @@
         }
       }
     },
+    "Boost on": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podbicie włączone"
+          }
+        }
+      }
+    },
     "Brightness for %@": {
       "localizations": {
         "pl": {
@@ -303,6 +313,16 @@
         }
       }
     },
+    "Day": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dzień"
+          }
+        }
+      }
+    },
     "Day mode": {
       "localizations": {
         "pl": {
@@ -329,16 +349,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diagnostyka"
-          }
-        }
-      }
-    },
-    "Display Brightness": {
-      "localizations": {
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jasność ekranu"
           }
         }
       }
@@ -721,6 +731,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nakładka multiply"
+          }
+        }
+      }
+    },
+    "Night": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noc"
           }
         }
       }
@@ -1135,6 +1155,16 @@
         }
       }
     },
+    "Standard brightness": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standardowa jasność"
+          }
+        }
+      }
+    },
     "Standard: the usual macOS range. 1000 nit: what the panel can sustain on a MacBook Pro. 1600 nit: peak brightness; macOS caps it when the panel or your Mac gets warm. The whole brightness range is scaled, so the lowest steps get brighter too.": {
       "localizations": {
         "pl": {
@@ -1165,6 +1195,16 @@
         }
       }
     },
+    "Sunrise": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wschód"
+          }
+        }
+      }
+    },
     "Sunrise and sunset": {
       "localizations": {
         "pl": {
@@ -1181,6 +1221,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Wschód słońca dziś"
+          }
+        }
+      }
+    },
+    "Sunset": {
+      "localizations": {
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zachód"
           }
         }
       }

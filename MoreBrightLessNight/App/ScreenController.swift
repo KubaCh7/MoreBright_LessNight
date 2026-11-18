@@ -209,6 +209,12 @@ final class ScreenController: ObservableObject, Identifiable {
         if let overrideGain { return overrideGain }
         let requested = requestedGain
         guard requested > 1.0001 else { return 1 }
+        // Transfer table: follow the live headroom exactly. Holding through dips or guessing
+        // (wake-up gain, potential fallback) would push channels past the headroom and clip
+        // them, which tints white blue. Window animations don't affect the table anyway.
+        if technique == .gammaTable {
+            return currentHeadroom >= 1.05 ? min(requested, currentHeadroom) : 1
+        }
         return min(requested, availableHeadroom)
     }
 
@@ -304,16 +310,18 @@ final class ScreenController: ObservableObject, Identifiable {
         switch technique {
         case .gammaTable:
             overlay?.setGain(1, animated: false)
-            if gain > 1.0001 {
+            if boosting {
+                // The trigger runs whenever a boost is wanted, so EDR engages even while the
+                // table is still at 1× waiting for headroom.
                 if trigger == nil { trigger = EDROverlay(screen: screen, mode: .trigger) }
                 trigger?.setGain(Self.triggerValue, animated: false)
-                gamma.setGain(gain, animated: animated)
+                gamma.setGain(gain, headroom: currentHeadroom, animated: animated)
             } else {
-                gamma.setGain(1, animated: animated)
+                gamma.setGain(1, headroom: currentHeadroom, animated: animated)
                 trigger?.setGain(1, animated: false)
             }
         case .overlay:
-            gamma.setGain(1, animated: false)
+            gamma.setGain(1, headroom: currentHeadroom, animated: false)
             trigger?.setGain(1, animated: false)
             if gain > 1.0001 {
                 if overlay == nil { overlay = EDROverlay(screen: screen) }

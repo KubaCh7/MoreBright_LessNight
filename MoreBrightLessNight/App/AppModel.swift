@@ -399,6 +399,47 @@ final class AppModel: ObservableObject {
         scheduleControlsLevel = true
     }
 
+    struct ScheduleSwitch {
+        let date: Date
+        let period: DayPeriod
+        let level: BoostLevel
+    }
+
+    /// The next time the schedule changes the level, for the popover.
+    var nextScheduleSwitch: ScheduleSwitch? {
+        guard scheduleEnabled else { return nil }
+        let now = Date()
+        var candidates: [(Date, DayPeriod)] = []
+        for offset in 0...2 {
+            guard let day = Calendar.current.date(byAdding: .day, value: offset, to: now) else { continue }
+            switch scheduleKind {
+            case .sun:
+                guard let c = location.coordinate,
+                      let times = SolarCalculator.sunTimes(on: day, latitude: c.latitude, longitude: c.longitude) else { continue }
+                candidates.append((times.sunrise, .day))
+                candidates.append((times.sunset, .night))
+            case .custom:
+                for (minutes, period) in [(dayStartMinutes, DayPeriod.day), (nightStartMinutes, .night)] {
+                    if let date = Calendar.current.date(bySettingHour: minutes / 60, minute: minutes % 60, second: 0, of: day) {
+                        candidates.append((date, period))
+                    }
+                }
+            }
+        }
+        guard let next = candidates.filter({ $0.0 > now }).min(by: { $0.0 < $1.0 }) else { return nil }
+        return ScheduleSwitch(date: next.0, period: next.1, level: allowed(next.1 == .day ? dayLevel : nightLevel))
+    }
+
+    func levelTitle(_ level: BoostLevel) -> String {
+        level == .off ? String(localized: "Standard") : "\(Int(maxNits(for: level).rounded())) nit"
+    }
+
+    /// Roughly how bright full macOS brightness is right now on the first EDR display.
+    var currentPeakNits: Double? {
+        guard let screen = screens.first(where: \.supportsEDR), isBoostActive else { return nil }
+        return screen.profile.sdrNits * screen.appliedGain
+    }
+
     func timeBinding(_ keyPath: ReferenceWritableKeyPath<AppModel, Int>) -> Binding<Date> {
         Binding(
             get: {

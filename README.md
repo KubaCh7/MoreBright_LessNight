@@ -20,6 +20,7 @@ Dwie techniki do wyboru (Ustawienia → Zaawansowane). Obie wymagają ekranu z E
 - Dla krzywej potęgowej `(k·x)^γ = k^γ·x^γ`, czyli to czyste liniowe wzmocnienie każdego kanału. Kolor i white point zostają, a to, co system miał w tabeli, jest zachowane.
 - Działa w potoku wyświetlania, więc ⌘Tab, przesuwanie biurek trzema palcami i Mission Control go nie przerywają.
 - Co 2 s aplikacja sprawdza, czy ktoś nie podmienił tabeli, i w razie potrzeby nakłada podbicie od nowa.
+- Mnożnik jest ograniczany tak, żeby **najwyższy kanał** kończył dokładnie na bieżącym headroomie. True Tone i Night Shift ocieplają biel, więc krzywa czerwona kończy się wyżej niż niebieska. Bez tego limitu ciepłe kanały byłyby ucinane pierwsze, a biel robiłaby się niebieskawa. Przy tabeli transferu wzmocnienie podąża za bieżącym headroomem bez przetrzymywania i zgadywania.
 - macOS sam przywraca tabele po zakończeniu procesu, więc crash niczego nie zostawia.
 
 **Nakładka multiply (alternatywa)**
